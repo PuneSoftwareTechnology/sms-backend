@@ -1,0 +1,30 @@
+{
+  "name": "sms-backend",
+  "version": "1.0.0",
+  "description": "Student Management & Placement CRM backend",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "check": "node -e \"import('./src/app.js').then(() => console.log('App loaded'))\""
+  },
+  "keywords": [
+    "express",
+    "postgres",
+    "rbac",
+    "crm"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "node-cron": "^4.2.1",
+    "pg": "^8.18.0",
+    "zod": "^4.1.11"
+  }
+}

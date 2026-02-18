@@ -1,0 +1,110 @@
+CREATE TYPE user_role AS ENUM ('SUPER_ADMIN', 'ADMIN', 'RECRUITER', 'STUDENT');
+
+CREATE TABLE IF NOT EXISTS users (
+  id BIGSERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  phone TEXT,
+  password_hash TEXT NOT NULL,
+  role user_role NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  is_approved BOOLEAN NOT NULL DEFAULT false,
+  last_login TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS student_profiles (
+  user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  city TEXT,
+  area TEXT,
+  graduation TEXT,
+  post_graduation TEXT,
+  employment_status TEXT,
+  it_exp_years NUMERIC(5,2),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS verification_tokens (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS enquiries (
+  id BIGSERIAL PRIMARY KEY,
+  lead_status TEXT NOT NULL DEFAULT 'NEW',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS enrollments (
+  id BIGSERIAL PRIMARY KEY,
+  student_id BIGINT NOT NULL REFERENCES users(id),
+  enquiry_id BIGINT REFERENCES enquiries(id),
+  course TEXT NOT NULL,
+  total_fee NUMERIC(10,2) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+  id BIGSERIAL PRIMARY KEY,
+  enrollment_id BIGINT NOT NULL REFERENCES enrollments(id) ON DELETE CASCADE,
+  amount NUMERIC(10,2) NOT NULL,
+  installment_number INT NOT NULL,
+  receipt_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS qr_codes (
+  id BIGSERIAL PRIMARY KEY,
+  is_active BOOLEAN NOT NULL DEFAULT false,
+  image_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS tests (
+  id BIGSERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS questions (
+  id BIGSERIAL PRIMARY KEY,
+  test_id BIGINT NOT NULL REFERENCES tests(id) ON DELETE CASCADE,
+  question TEXT NOT NULL,
+  correct_answer TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS test_attempts (
+  id BIGSERIAL PRIMARY KEY,
+  test_id BIGINT NOT NULL REFERENCES tests(id),
+  student_id BIGINT NOT NULL REFERENCES users(id),
+  score INT NOT NULL,
+  total_questions INT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS cvs (
+  id BIGSERIAL PRIMARY KEY,
+  student_id BIGINT NOT NULL REFERENCES users(id),
+  file_url TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS recruiter_download_logs (
+  id BIGSERIAL PRIMARY KEY,
+  recruiter_id BIGINT NOT NULL REFERENCES users(id),
+  student_id BIGINT NOT NULL REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS recruiter_shortlists (
+  id BIGSERIAL PRIMARY KEY,
+  recruiter_id BIGINT NOT NULL REFERENCES users(id),
+  student_id BIGINT NOT NULL REFERENCES users(id),
+  course TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
