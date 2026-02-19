@@ -1,14 +1,21 @@
 import ApiError from '../utils/apiError.js';
 import userRepository from '../repositories/user.repository.js';
-const allowedPrefixes = ['/api/students/profile'];
+
+const allowedRoutes = [
+  { method: 'GET', pathPrefix: '/api/student/profile' },
+  { method: 'PUT', pathPrefix: '/api/student/profile' },
+];
 
 async function studentApprovalMiddleware(req, res, next) {
   if (!req.user || req.user.role !== 'STUDENT') {
     return next();
   }
 
-  const isProfileRoute = allowedPrefixes.some((prefix) => req.originalUrl.startsWith(prefix));
-  if (isProfileRoute) {
+  const exempted = allowedRoutes.some(
+    (route) => route.method === req.method && req.originalUrl.startsWith(route.pathPrefix),
+  );
+
+  if (exempted) {
     return next();
   }
 

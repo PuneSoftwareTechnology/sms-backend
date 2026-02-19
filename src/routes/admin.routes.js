@@ -7,21 +7,45 @@ import enrollmentController from '../controllers/enrollment.controller.js';
 import paymentController from '../controllers/payment.controller.js';
 import testController from '../controllers/test.controller.js';
 import studentController from '../controllers/student.controller.js';
-import { convertEnquirySchema  } from '../validators/enrollment.validator.js';
-import { createPaymentSchema  } from '../validators/payment.validator.js';
-import { createTestSchema  } from '../validators/test.validator.js';
+import recruiterController from '../controllers/recruiter.controller.js';
+import enquiryController from '../controllers/enquiry.controller.js';
+import reportController from '../controllers/report.controller.js';
+import { convertEnquirySchema, updateBatchEndDateSchema } from '../validators/enrollment.validator.js';
+import { createPaymentSchema } from '../validators/payment.validator.js';
+import { createTestSchema, createQuestionSchema, updateQuestionSchema } from '../validators/test.validator.js';
+import { createRecruiterSchema } from '../validators/recruiter.validator.js';
+import { createEnquirySchema, updateEnquirySchema, enquiryFilterSchema } from '../validators/enquiry.validator.js';
+import { candidateFilterReportSchema, feeDueSchema } from '../validators/report.validator.js';
+import { uuidIdParamSchema, userIdParamSchema, enrollmentIdParamSchema } from '../validators/common.validator.js';
+
 const router = express.Router();
 
 router.use(authMiddleware, authorizeRoles('ADMIN', 'SUPER_ADMIN'));
 
-router.post(
-  '/enrollments/convert-enquiry',
-  validate(convertEnquirySchema),
-  asyncHandler(enrollmentController.convertEnquiry),
-);
-router.get('/enrollments/:enrollmentId', asyncHandler(enrollmentController.getEnrollmentById));
+router.post('/enrollments/convert-enquiry', validate(convertEnquirySchema), asyncHandler(enrollmentController.convertEnquiry));
+router.get('/enrollments/:enrollmentId', validate(enrollmentIdParamSchema), asyncHandler(enrollmentController.getEnrollmentById));
+router.put('/enrollments/batches/:batch/end-date', validate(updateBatchEndDateSchema), asyncHandler(enrollmentController.updateBatchEndDate));
+
 router.post('/payments', validate(createPaymentSchema), asyncHandler(paymentController.createPayment));
+
 router.post('/tests', validate(createTestSchema), asyncHandler(testController.createTest));
-router.get('/students/:userId/profile', asyncHandler(studentController.getStudentProfile));
+router.post('/tests/:id/questions', validate(createQuestionSchema), asyncHandler(testController.addQuestion));
+router.put('/questions/:id', validate(updateQuestionSchema), asyncHandler(testController.updateQuestion));
+router.delete('/questions/:id', validate(uuidIdParamSchema), asyncHandler(testController.deleteQuestion));
+
+router.get('/students/:userId/profile', validate(userIdParamSchema), asyncHandler(studentController.getStudentProfile));
+router.patch('/students/:id/approve', validate(uuidIdParamSchema), asyncHandler(studentController.approveStudent));
+
+router.post('/recruiters', validate(createRecruiterSchema), asyncHandler(recruiterController.createRecruiter));
+router.delete('/recruiters/:id', validate(uuidIdParamSchema), asyncHandler(recruiterController.deleteRecruiter));
+
+router.get('/enquiries', validate(enquiryFilterSchema), asyncHandler(enquiryController.listEnquiries));
+router.post('/enquiries', validate(createEnquirySchema), asyncHandler(enquiryController.createEnquiry));
+router.put('/enquiries/:id', validate(updateEnquirySchema), asyncHandler(enquiryController.updateEnquiry));
+router.delete('/enquiries/:id', validate(uuidIdParamSchema), asyncHandler(enquiryController.deleteEnquiry));
+
+router.get('/reports/candidate-filter', validate(candidateFilterReportSchema), asyncHandler(reportController.candidateFilter));
+router.get('/reports/fee-due', validate(feeDueSchema), asyncHandler(reportController.feeDue));
+router.get('/reports/enrollment-figures', asyncHandler(reportController.enrollmentFigures));
 
 export default router;

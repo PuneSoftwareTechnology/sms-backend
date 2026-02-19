@@ -1,4 +1,5 @@
-import { z  } from 'zod';
+import { z } from 'zod';
+
 const signupSchema = z.object({
   body: z.object({
     name: z.string().min(2),
@@ -23,12 +24,15 @@ const updateProfileSchema = z.object({
   query: z.object({}).optional(),
 });
 
-export {
-signupSchema,
-  updateProfileSchema,
-};
+const certificationSchema = z.object({
+  body: z.object({
+    title: z.string().min(2),
+    issuer: z.string().optional(),
+    issueDate: z.string().optional(),
+  }),
+  params: z.object({}).optional(),
+  query: z.object({}).optional(),
+});
 
-export default {
-signupSchema,
-  updateProfileSchema,
-};
+export { signupSchema, updateProfileSchema, certificationSchema };
+export default { signupSchema, updateProfileSchema, certificationSchema };

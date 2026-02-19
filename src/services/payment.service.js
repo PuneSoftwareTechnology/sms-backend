@@ -1,7 +1,8 @@
 import ApiError from '../utils/apiError.js';
 import paymentRepository from '../repositories/payment.repository.js';
 import enrollmentRepository from '../repositories/enrollment.repository.js';
-import emailService from '../emails/email.service.js';
+import emailService from './email.service.js';
+
 async function addPayment(payload) {
   const enrollment = await enrollmentRepository.findEnrollmentDetailsById(payload.enrollmentId);
   if (!enrollment) {
@@ -28,10 +29,6 @@ async function addPayment(payload) {
   };
 }
 
-export {
-addPayment,
-};
+export { addPayment };
 
-export default {
-addPayment,
-};
+export default { addPayment };

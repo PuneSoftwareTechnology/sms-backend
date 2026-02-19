@@ -1,11 +1,7 @@
 import pool from '../config/db.js';
+
 async function createEmptyProfile(userId, client = pool) {
-  const query = `
-    INSERT INTO student_profiles (user_id)
-    VALUES ($1)
-    RETURNING *
-  `;
-  const { rows } = await client.query(query, [userId]);
+  const { rows } = await client.query('INSERT INTO student_profiles (user_id) VALUES ($1) RETURNING *', [userId]);
   return rows[0];
 }
 
@@ -60,14 +56,71 @@ async function findFullProfile(userId, client = pool) {
   return rows[0] || null;
 }
 
+async function createCertification(payload, client = pool) {
+  const { rows } = await client.query(
+    `
+      INSERT INTO certifications (student_id, title, issuer, issue_date)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+    `,
+    [payload.studentId, payload.title, payload.issuer || null, payload.issueDate || null],
+  );
+  return rows[0];
+}
+
+async function deleteCertification(certificationId, studentId, client = pool) {
+  const { rows } = await client.query(
+    'DELETE FROM certifications WHERE id = $1 AND student_id = $2 RETURNING id',
+    [certificationId, studentId],
+  );
+  return rows[0] || null;
+}
+
+async function createProjectSubmission(studentId, fileUrl, client = pool) {
+  const { rows } = await client.query(
+    'INSERT INTO project_submissions (student_id, file_url) VALUES ($1, $2) RETURNING *',
+    [studentId, fileUrl],
+  );
+  return rows[0];
+}
+
+async function findCvByStudentId(studentId, client = pool) {
+  const { rows } = await client.query('SELECT * FROM cvs WHERE student_id = $1', [studentId]);
+  return rows[0] || null;
+}
+
+async function upsertCv(studentId, fileUrl, client = pool) {
+  const { rows } = await client.query(
+    `
+      INSERT INTO cvs (student_id, file_url)
+      VALUES ($1, $2)
+      ON CONFLICT (student_id)
+      DO UPDATE SET file_url = EXCLUDED.file_url, updated_at = NOW()
+      RETURNING *
+    `,
+    [studentId, fileUrl],
+  );
+  return rows[0];
+}
+
 export {
-createEmptyProfile,
+  createEmptyProfile,
   updateProfile,
   findFullProfile,
+  createCertification,
+  deleteCertification,
+  createProjectSubmission,
+  findCvByStudentId,
+  upsertCv,
 };
 
 export default {
-createEmptyProfile,
+  createEmptyProfile,
   updateProfile,
   findFullProfile,
+  createCertification,
+  deleteCertification,
+  createProjectSubmission,
+  findCvByStudentId,
+  upsertCv,
 };
