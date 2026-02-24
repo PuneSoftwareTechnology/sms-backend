@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import ApiError from "../utils/apiError.js";
+import pool from "../config/db.js";
 import recruiterRepository from "../repositories/recruiter.repository.js";
 import userRepository from "../repositories/user.repository.js";
 import emailService from "./email.service.js";
@@ -54,26 +55,34 @@ async function shortlistCandidate(payload) {
 }
 
 async function createRecruiter(payload) {
-  const existing = await userRepository.findByEmail(payload.email);
-  if (existing) {
-    throw new ApiError(409, "Email already exists");
+  // 1. Check if user already exists in users table (by email or phone)
+  const existingByEmail = await userRepository.findByEmail(payload.email);
+  if (existingByEmail) {
+    throw new ApiError(400, "User with this email already exists");
+  }
+
+  if (payload.phone) {
+    const { rows } = await pool.query("SELECT id FROM users WHERE phone = $1", [
+      payload.phone,
+    ]);
+    if (rows.length > 0) {
+      throw new ApiError(400, "User with this phone already exists");
+    }
   }
 
   const passwordHash = await bcrypt.hash(payload.password, 10);
-  return userRepository.createUser({
+  return recruiterRepository.createRecruiter({
     name: payload.name,
-    email: payload.email,
     phone: payload.phone,
+    email: payload.email,
     passwordHash,
-    role: "RECRUITER",
-    isActive: true,
-    isApproved: true,
-    isEmailVerified: true,
+    companyName: payload.companyName,
+    designation: payload.designation,
   });
 }
 
 async function deleteRecruiter(id) {
-  const deleted = await userRepository.deleteUserByRole(id, "RECRUITER");
+  const deleted = await recruiterRepository.deleteRecruiter(id);
   if (!deleted) {
     throw new ApiError(404, "Recruiter not found");
   }
@@ -81,7 +90,7 @@ async function deleteRecruiter(id) {
 }
 
 async function getAllRecruiters() {
-  return userRepository.listUsersByRole("RECRUITER");
+  return recruiterRepository.listAllRecruiters();
 }
 
 export {

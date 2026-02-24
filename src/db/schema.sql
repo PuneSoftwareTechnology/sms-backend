@@ -159,21 +159,31 @@ CREATE TABLE IF NOT EXISTS project_submissions (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS recruiter_profiles (
+  user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  company_name TEXT,
+  designation TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS recruiter_download_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  recruiter_id UUID NOT NULL REFERENCES users(id),
+  recruiter_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   student_id UUID NOT NULL REFERENCES users(id),
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS recruiter_shortlists (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  recruiter_id UUID NOT NULL REFERENCES users(id),
+  recruiter_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   student_id UUID NOT NULL REFERENCES users(id),
   course TEXT NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(recruiter_id, student_id, course)
 );
+
+CREATE TRIGGER trg_recruiter_profiles_updated_at BEFORE UPDATE ON recruiter_profiles FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_enrollments_course ON enrollments(course);

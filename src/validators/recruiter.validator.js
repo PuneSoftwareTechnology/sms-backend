@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 const shortlistSchema = z.object({
   body: z.object({ studentId: z.string().uuid(), course: z.string().min(2) }),
@@ -15,9 +15,11 @@ const downloadSchema = z.object({
 const createRecruiterSchema = z.object({
   body: z.object({
     name: z.string().min(2),
+    phone: z.string().min(10),
     email: z.string().email(),
     password: z.string().min(6),
-    phone: z.string().optional(),
+    companyName: z.string().optional(),
+    designation: z.string().optional(),
   }),
   params: z.object({}).optional(),
   query: z.object({}).optional(),
@@ -33,5 +35,15 @@ const candidateFilterQuerySchema = z.object({
   }),
 });
 
-export { shortlistSchema, downloadSchema, createRecruiterSchema, candidateFilterQuerySchema };
-export default { shortlistSchema, downloadSchema, createRecruiterSchema, candidateFilterQuerySchema };
+export {
+  shortlistSchema,
+  downloadSchema,
+  createRecruiterSchema,
+  candidateFilterQuerySchema,
+};
+export default {
+  shortlistSchema,
+  downloadSchema,
+  createRecruiterSchema,
+  candidateFilterQuerySchema,
+};

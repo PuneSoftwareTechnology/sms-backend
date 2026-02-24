@@ -1,11 +1,11 @@
-import bcrypt from 'bcrypt';
-import ApiError from '../utils/apiError.js';
-import userRepository from '../repositories/user.repository.js';
+import bcrypt from "bcrypt";
+import ApiError from "../utils/apiError.js";
+import userRepository from "../repositories/user.repository.js";
 
 async function createAdmin(payload) {
   const existing = await userRepository.findByEmail(payload.email);
   if (existing) {
-    throw new ApiError(409, 'Email already exists');
+    throw new ApiError(409, "Email already exists");
   }
 
   const passwordHash = await bcrypt.hash(payload.password, 10);
@@ -14,7 +14,7 @@ async function createAdmin(payload) {
     email: payload.email,
     phone: payload.phone,
     passwordHash,
-    role: 'ADMIN',
+    role: "ADMIN",
     isActive: true,
     isApproved: true,
     isEmailVerified: true,
@@ -22,13 +22,17 @@ async function createAdmin(payload) {
 }
 
 async function deleteAdmin(id) {
-  const deleted = await userRepository.deleteUserByRole(id, 'ADMIN');
+  const deleted = await userRepository.deleteUserByRole(id, "ADMIN");
   if (!deleted) {
-    throw new ApiError(404, 'Admin not found');
+    throw new ApiError(404, "Admin not found");
   }
   return deleted;
 }
 
-export { createAdmin, deleteAdmin };
+async function getAllAdmins() {
+  return userRepository.listUsersByRole("ADMIN");
+}
 
-export default { createAdmin, deleteAdmin };
+export { createAdmin, deleteAdmin, getAllAdmins };
+
+export default { createAdmin, deleteAdmin, getAllAdmins };

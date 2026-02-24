@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 const loginSchema = z.object({
   body: z.object({
@@ -27,5 +27,15 @@ const resetPasswordSchema = z.object({
   query: z.object({}).optional(),
 });
 
-export { loginSchema, verifyEmailSchema, forgotPasswordSchema, resetPasswordSchema };
-export default { loginSchema, verifyEmailSchema, forgotPasswordSchema, resetPasswordSchema };
+export {
+  loginSchema,
+  verifyEmailSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+};
+export default {
+  loginSchema,
+  verifyEmailSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+};
