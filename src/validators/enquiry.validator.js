@@ -1,15 +1,24 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 const enquiryBody = z.object({
+  enquiryDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD")
+    .optional(),
   name: z.string().min(2),
-  email: z.string().email(),
-  phone: z.string().optional(),
+  phone: z.string().min(7),
+  email: z.string().email().optional(),
   course: z.string().optional(),
+  institute: z.string().optional(),
   leadStatus: z.string().optional(),
   demoStatus: z.string().optional(),
 });
 
-const createEnquirySchema = z.object({ body: enquiryBody, params: z.object({}).optional(), query: z.object({}).optional() });
+const createEnquirySchema = z.object({
+  body: enquiryBody,
+  params: z.object({}).optional(),
+  query: z.object({}).optional(),
+});
 
 const updateEnquirySchema = z.object({
   body: enquiryBody,
@@ -29,4 +38,8 @@ const enquiryFilterSchema = z.object({
 });
 
 export { createEnquirySchema, updateEnquirySchema, enquiryFilterSchema };
-export default { createEnquirySchema, updateEnquirySchema, enquiryFilterSchema };
+export default {
+  createEnquirySchema,
+  updateEnquirySchema,
+  enquiryFilterSchema,
+};

@@ -63,14 +63,16 @@ CREATE TABLE IF NOT EXISTS token_blacklist (
 
 CREATE TABLE IF NOT EXISTS enquiries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  phone TEXT,
-  course TEXT,
-  lead_status TEXT NOT NULL DEFAULT 'NEW',
-  demo_status TEXT NOT NULL DEFAULT 'PENDING',
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  enquiry_date DATE NOT NULL,
+  name VARCHAR(150) NOT NULL,
+  phone VARCHAR(20) NOT NULL,
+  email VARCHAR(150),
+  course VARCHAR(100),
+  institute VARCHAR(50),
+  lead_status lead_status_enum,
+  demo_status demo_status_enum,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS enrollments (

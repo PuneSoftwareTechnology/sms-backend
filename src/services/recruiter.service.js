@@ -1,9 +1,9 @@
-import bcrypt from 'bcrypt';
-import ApiError from '../utils/apiError.js';
-import recruiterRepository from '../repositories/recruiter.repository.js';
-import userRepository from '../repositories/user.repository.js';
-import emailService from './email.service.js';
-import s3Service from '../utils/s3.service.js';
+import bcrypt from "bcrypt";
+import ApiError from "../utils/apiError.js";
+import recruiterRepository from "../repositories/recruiter.repository.js";
+import userRepository from "../repositories/user.repository.js";
+import emailService from "./email.service.js";
+import s3Service from "../utils/s3.service.js";
 
 const MAX_DOWNLOADS = 100;
 
@@ -12,9 +12,10 @@ async function filterCandidates(filters) {
 }
 
 async function downloadCv(recruiterId, studentId) {
-  const totalDownloads = await recruiterRepository.countRecruiterDownloads(recruiterId);
+  const totalDownloads =
+    await recruiterRepository.countRecruiterDownloads(recruiterId);
   if (totalDownloads >= MAX_DOWNLOADS) {
-    throw new ApiError(403, 'Download limit reached');
+    throw new ApiError(403, "Download limit reached");
   }
 
   await recruiterRepository.insertDownloadLog(recruiterId, studentId);
@@ -44,7 +45,7 @@ async function getDownloadCount(recruiterId) {
 async function shortlistCandidate(payload) {
   const exists = await recruiterRepository.shortlistExists(payload);
   if (exists) {
-    throw new ApiError(409, 'Candidate already shortlisted for this course');
+    throw new ApiError(409, "Candidate already shortlisted for this course");
   }
 
   const row = await recruiterRepository.insertShortlist(payload);
@@ -55,7 +56,7 @@ async function shortlistCandidate(payload) {
 async function createRecruiter(payload) {
   const existing = await userRepository.findByEmail(payload.email);
   if (existing) {
-    throw new ApiError(409, 'Email already exists');
+    throw new ApiError(409, "Email already exists");
   }
 
   const passwordHash = await bcrypt.hash(payload.password, 10);
@@ -64,7 +65,7 @@ async function createRecruiter(payload) {
     email: payload.email,
     phone: payload.phone,
     passwordHash,
-    role: 'RECRUITER',
+    role: "RECRUITER",
     isActive: true,
     isApproved: true,
     isEmailVerified: true,
@@ -72,13 +73,33 @@ async function createRecruiter(payload) {
 }
 
 async function deleteRecruiter(id) {
-  const deleted = await userRepository.deleteUserByRole(id, 'RECRUITER');
+  const deleted = await userRepository.deleteUserByRole(id, "RECRUITER");
   if (!deleted) {
-    throw new ApiError(404, 'Recruiter not found');
+    throw new ApiError(404, "Recruiter not found");
   }
   return deleted;
 }
 
-export { filterCandidates, downloadCv, getDownloadCount, shortlistCandidate, createRecruiter, deleteRecruiter };
+async function getAllRecruiters() {
+  return userRepository.listUsersByRole("RECRUITER");
+}
 
-export default { filterCandidates, downloadCv, getDownloadCount, shortlistCandidate, createRecruiter, deleteRecruiter };
+export {
+  filterCandidates,
+  downloadCv,
+  getDownloadCount,
+  shortlistCandidate,
+  createRecruiter,
+  deleteRecruiter,
+  getAllRecruiters,
+};
+
+export default {
+  filterCandidates,
+  downloadCv,
+  getDownloadCount,
+  shortlistCandidate,
+  createRecruiter,
+  deleteRecruiter,
+  getAllRecruiters,
+};

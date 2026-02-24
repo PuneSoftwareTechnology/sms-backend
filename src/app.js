@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import compression from "compression";
 import env from "./config/env.js";
 import routes from "./routes/index.js";
 import {
@@ -17,6 +18,7 @@ app.use(
         : env.corsOrigin.split(",").map((o) => o.trim()),
   }),
 );
+app.use(compression());
 app.use(express.json());
 app.use((req, _res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);

@@ -1,19 +1,21 @@
-import pool from '../config/db.js';
+import pool from "../config/db.js";
 
 async function createEnquiry(payload, client = pool) {
   const { rows } = await client.query(
     `
-      INSERT INTO enquiries (name, email, phone, course, lead_status, demo_status)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO enquiries (enquiry_date, name, phone, email, course, institute, lead_status, demo_status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `,
     [
+      payload.enquiryDate || new Date().toISOString().slice(0, 10),
       payload.name,
-      payload.email,
-      payload.phone || null,
+      payload.phone,
+      payload.email || null,
       payload.course || null,
-      payload.leadStatus || 'NEW',
-      payload.demoStatus || 'PENDING',
+      payload.institute || null,
+      payload.leadStatus || "PROSPECTIVE",
+      payload.demoStatus || "PENDING",
     ],
   );
   return rows[0];
@@ -21,7 +23,7 @@ async function createEnquiry(payload, client = pool) {
 
 async function listEnquiries(filters = {}, client = pool) {
   const values = [];
-  const conditions = ['1=1'];
+  const conditions = ["1=1"];
 
   if (filters.fromDate) {
     values.push(filters.fromDate);
@@ -41,7 +43,7 @@ async function listEnquiries(filters = {}, client = pool) {
   }
 
   const { rows } = await client.query(
-    `SELECT * FROM enquiries WHERE ${conditions.join(' AND ')} ORDER BY created_at DESC`,
+    `SELECT * FROM enquiries WHERE ${conditions.join(" AND ")} ORDER BY created_at DESC`,
     values,
   );
   return rows;
@@ -51,23 +53,38 @@ async function updateEnquiry(id, payload, client = pool) {
   const { rows } = await client.query(
     `
       UPDATE enquiries
-      SET name = $1,
-          email = $2,
+      SET enquiry_date = $1,
+          name = $2,
           phone = $3,
-          course = $4,
-          lead_status = $5,
-          demo_status = $6,
+          email = $4,
+          course = $5,
+          institute = $6,
+          lead_status = $7,
+          demo_status = $8,
           updated_at = NOW()
-      WHERE id = $7
+      WHERE id = $9
       RETURNING *
     `,
-    [payload.name, payload.email, payload.phone || null, payload.course || null, payload.leadStatus, payload.demoStatus, id],
+    [
+      payload.enquiryDate || new Date().toISOString().slice(0, 10),
+      payload.name,
+      payload.phone,
+      payload.email || null,
+      payload.course || null,
+      payload.institute || null,
+      payload.leadStatus,
+      payload.demoStatus,
+      id,
+    ],
   );
   return rows[0] || null;
 }
 
 async function deleteEnquiry(id, client = pool) {
-  const { rows } = await client.query('DELETE FROM enquiries WHERE id = $1 RETURNING id', [id]);
+  const { rows } = await client.query(
+    "DELETE FROM enquiries WHERE id = $1 RETURNING id",
+    [id],
+  );
   return rows[0] || null;
 }
 
@@ -85,6 +102,18 @@ async function updateLeadStatus(enquiryId, status, client = pool) {
   return rows[0] || null;
 }
 
-export { createEnquiry, listEnquiries, updateEnquiry, deleteEnquiry, updateLeadStatus };
+export {
+  createEnquiry,
+  listEnquiries,
+  updateEnquiry,
+  deleteEnquiry,
+  updateLeadStatus,
+};
 
-export default { createEnquiry, listEnquiries, updateEnquiry, deleteEnquiry, updateLeadStatus };
+export default {
+  createEnquiry,
+  listEnquiries,
+  updateEnquiry,
+  deleteEnquiry,
+  updateLeadStatus,
+};

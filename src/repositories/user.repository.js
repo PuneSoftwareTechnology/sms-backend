@@ -1,4 +1,4 @@
-import pool from '../config/db.js';
+import pool from "../config/db.js";
 
 async function findByEmail(email, client = pool) {
   const query = `
@@ -42,19 +42,22 @@ async function createUser(payload, client = pool) {
 }
 
 async function updateLastLogin(id, client = pool) {
-  await client.query('UPDATE users SET last_login = NOW() WHERE id = $1', [id]);
+  await client.query("UPDATE users SET last_login = NOW() WHERE id = $1", [id]);
 }
 
 async function setEmailVerified(id, client = pool) {
   const { rows } = await client.query(
-    'UPDATE users SET is_email_verified = true, updated_at = NOW() WHERE id = $1 RETURNING id, email, is_email_verified',
+    "UPDATE users SET is_email_verified = true, updated_at = NOW() WHERE id = $1 RETURNING id, email, is_email_verified",
     [id],
   );
   return rows[0] || null;
 }
 
 async function updatePasswordHash(id, passwordHash, client = pool) {
-  await client.query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [passwordHash, id]);
+  await client.query(
+    "UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2",
+    [passwordHash, id],
+  );
 }
 
 async function approveStudent(id, client = pool) {
@@ -72,8 +75,22 @@ async function approveStudent(id, client = pool) {
 }
 
 async function deleteUserByRole(id, role, client = pool) {
-  const { rows } = await client.query('DELETE FROM users WHERE id = $1 AND role = $2 RETURNING id', [id, role]);
+  const { rows } = await client.query(
+    "DELETE FROM users WHERE id = $1 AND role = $2 RETURNING id",
+    [id, role],
+  );
   return rows[0] || null;
+}
+
+async function listUsersByRole(role, client = pool) {
+  const query = `
+    SELECT id, name, email, phone, role, is_active, is_approved, is_email_verified, last_login, created_at
+    FROM users
+    WHERE role = $1
+    ORDER BY created_at DESC
+  `;
+  const { rows } = await client.query(query, [role]);
+  return rows;
 }
 
 async function deactivateInactiveRecruiters(client = pool) {
@@ -96,6 +113,7 @@ export {
   approveStudent,
   deleteUserByRole,
   deactivateInactiveRecruiters,
+  listUsersByRole,
 };
 
 export default {
@@ -108,4 +126,5 @@ export default {
   approveStudent,
   deleteUserByRole,
   deactivateInactiveRecruiters,
+  listUsersByRole,
 };
