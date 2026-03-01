@@ -1,20 +1,65 @@
-import pool from '../config/db.js';
+import pool from "../config/db.js";
+
+async function listEnrollments(filters = {}, client = pool) {
+  const values = [];
+  const conditions = ["1=1"];
+
+  if (filters.enrollment_status) {
+    values.push(filters.enrollment_status);
+    conditions.push(`e.enrollment_status = $${values.length}`);
+  }
+  if (filters.institute) {
+    values.push(filters.institute);
+    conditions.push(`e.institute = $${values.length}`);
+  }
+  if (filters.course) {
+    values.push(filters.course);
+    conditions.push(`e.course ILIKE '%' || $${values.length} || '%'`);
+  }
+  const where = conditions.join(" AND ");
+
+  const countResult = await client.query(
+    `SELECT COUNT(*) FROM enrollments e LEFT JOIN users u ON e.student_id = u.id WHERE ${where}`,
+    values,
+  );
+  const total = parseInt(countResult.rows[0].count, 10);
+
+  const page = Math.max(1, parseInt(filters.page, 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(filters.limit, 10) || 50));
+  const offset = (page - 1) * limit;
+
+  values.push(limit);
+  values.push(offset);
+
+  const { rows } = await client.query(
+    `SELECT e.*, u.name, u.email, u.phone
+     FROM enrollments e
+     LEFT JOIN users u ON e.student_id = u.id
+     WHERE ${where}
+     ORDER BY e.created_at DESC
+     LIMIT $${values.length - 1} OFFSET $${values.length}`,
+    values,
+  );
+
+  return { items: rows, total, page, totalPages: Math.ceil(total / limit) };
+}
 
 async function createEnrollment(payload, client = pool) {
   const { rows } = await client.query(
     `
-      INSERT INTO enrollments (student_id, enquiry_id, course, batch, start_date, end_date, total_fee)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO enrollments (student_id, institute, course, batch, trainer, start_date, end_date, total_fee)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `,
     [
       payload.studentId,
-      payload.enquiryId,
+      payload.institute || null,
       payload.course,
       payload.batch || null,
+      payload.trainer || null,
       payload.startDate || null,
       payload.endDate || null,
-      payload.totalFee,
+      payload.totalFee || 0,
     ],
   );
   return rows[0];
@@ -25,7 +70,7 @@ async function findEnrollmentDetailsById(enrollmentId, client = pool) {
     `
       SELECT e.*, u.name, u.email, u.phone
       FROM enrollments e
-      JOIN users u ON e.student_id = u.id
+      LEFT JOIN users u ON e.student_id = u.id
       WHERE e.id = $1
     `,
     [enrollmentId],
@@ -35,7 +80,7 @@ async function findEnrollmentDetailsById(enrollmentId, client = pool) {
 
 async function updateBatchEndDate(batch, endDate, client = pool) {
   await client.query(
-    'UPDATE enrollments SET end_date = $1, updated_at = NOW() WHERE batch = $2',
+    "UPDATE enrollments SET end_date = $1, updated_at = NOW() WHERE batch = $2",
     [endDate, batch],
   );
 }
@@ -47,6 +92,18 @@ async function markBatchCompleted(batch, client = pool) {
   );
 }
 
-export { createEnrollment, findEnrollmentDetailsById, updateBatchEndDate, markBatchCompleted };
+export {
+  listEnrollments,
+  createEnrollment,
+  findEnrollmentDetailsById,
+  updateBatchEndDate,
+  markBatchCompleted,
+};
 
-export default { createEnrollment, findEnrollmentDetailsById, updateBatchEndDate, markBatchCompleted };
+export default {
+  listEnrollments,
+  createEnrollment,
+  findEnrollmentDetailsById,
+  updateBatchEndDate,
+  markBatchCompleted,
+};

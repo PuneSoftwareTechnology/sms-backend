@@ -1,53 +1,64 @@
-import bcrypt from 'bcrypt';
-import pool from '../config/db.js';
-import userRepository from '../repositories/user.repository.js';
-import studentRepository from '../repositories/student.repository.js';
-import enrollmentRepository from '../repositories/enrollment.repository.js';
-import enquiryRepository from '../repositories/enquiry.repository.js';
+import bcrypt from "bcrypt";
+import pool from "../config/db.js";
+import enrollmentRepository from "../repositories/enrollment.repository.js";
+import userRepository from "../repositories/user.repository.js";
+import studentRepository from "../repositories/student.repository.js";
 
-async function convertEnquiryToEnrollment(payload) {
+async function listEnrollments(filters = {}) {
+  return enrollmentRepository.listEnrollments(filters);
+}
+
+async function createCandidateEnrollment(payload) {
   const client = await pool.connect();
-
   try {
-    await client.query('BEGIN');
+    await client.query("BEGIN");
 
-    const passwordHash = await bcrypt.hash(payload.password, 10);
+    // Generate a default password from the phone or a random string
+    const defaultPassword = payload.phone || "Student@123";
+    const passwordHash = await bcrypt.hash(defaultPassword, 10);
 
+    // 1. Create user with STUDENT role
     const student = await userRepository.createUser(
       {
         name: payload.name,
         email: payload.email,
-        phone: payload.phone,
+        phone: payload.phone || null,
         passwordHash,
-        role: 'STUDENT',
+        role: "STUDENT",
         isActive: true,
         isApproved: false,
-        isEmailVerified: true,
+        isEmailVerified: false,
       },
       client,
     );
 
+    // 2. Create empty student profile
     await studentRepository.createEmptyProfile(student.id, client);
 
+    // 3. Create enrollment
     const enrollment = await enrollmentRepository.createEnrollment(
       {
         studentId: student.id,
-        enquiryId: payload.enquiryId,
+        institute: payload.institute || null,
         course: payload.course,
-        batch: payload.batch,
-        startDate: payload.startDate,
-        endDate: payload.endDate,
-        totalFee: payload.totalFee,
+        batch: payload.batch || null,
+        trainer: payload.trainer || null,
+        startDate: payload.startDate || null,
+        endDate: payload.endDate || null,
+        totalFee: payload.totalFees || 0,
       },
       client,
     );
 
-    await enquiryRepository.updateLeadStatus(payload.enquiryId, 'ENROLLED', client);
-
-    await client.query('COMMIT');
-    return enrollment;
+    await client.query("COMMIT");
+    return {
+      ...enrollment,
+      name: student.name,
+      email: student.email,
+      phone: student.phone,
+    };
   } catch (error) {
-    await client.query('ROLLBACK');
+    await client.query("ROLLBACK");
     throw error;
   } finally {
     client.release();
@@ -61,19 +72,29 @@ async function getEnrollmentDetails(enrollmentId) {
 async function updateBatchEndDate(batch, endDate) {
   const client = await pool.connect();
   try {
-    await client.query('BEGIN');
+    await client.query("BEGIN");
     await enrollmentRepository.updateBatchEndDate(batch, endDate, client);
     await enrollmentRepository.markBatchCompleted(batch, client);
-    await client.query('COMMIT');
-    return { batch, endDate, completionStatus: 'COMPLETED' };
+    await client.query("COMMIT");
+    return { batch, endDate, completionStatus: "COMPLETED" };
   } catch (error) {
-    await client.query('ROLLBACK');
+    await client.query("ROLLBACK");
     throw error;
   } finally {
     client.release();
   }
 }
 
-export { convertEnquiryToEnrollment, getEnrollmentDetails, updateBatchEndDate };
+export {
+  listEnrollments,
+  createCandidateEnrollment,
+  getEnrollmentDetails,
+  updateBatchEndDate,
+};
 
-export default { convertEnquiryToEnrollment, getEnrollmentDetails, updateBatchEndDate };
+export default {
+  listEnrollments,
+  createCandidateEnrollment,
+  getEnrollmentDetails,
+  updateBatchEndDate,
+};

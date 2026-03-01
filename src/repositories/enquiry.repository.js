@@ -42,11 +42,27 @@ async function listEnquiries(filters = {}, client = pool) {
     conditions.push(`demo_status = $${values.length}`);
   }
 
-  const { rows } = await client.query(
-    `SELECT * FROM enquiries WHERE ${conditions.join(" AND ")} ORDER BY created_at DESC`,
+  const where = conditions.join(" AND ");
+
+  const countResult = await client.query(
+    `SELECT COUNT(*) FROM enquiries WHERE ${where}`,
     values,
   );
-  return rows;
+  const total = parseInt(countResult.rows[0].count, 10);
+
+  const page = Math.max(1, parseInt(filters.page, 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(filters.limit, 10) || 50));
+  const offset = (page - 1) * limit;
+
+  values.push(limit);
+  values.push(offset);
+
+  const { rows } = await client.query(
+    `SELECT * FROM enquiries WHERE ${where} ORDER BY created_at DESC LIMIT $${values.length - 1} OFFSET $${values.length}`,
+    values,
+  );
+
+  return { items: rows, total, page, totalPages: Math.ceil(total / limit) };
 }
 
 async function updateEnquiry(id, payload, client = pool) {

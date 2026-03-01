@@ -10,10 +10,7 @@ import studentController from "../controllers/student.controller.js";
 import recruiterController from "../controllers/recruiter.controller.js";
 import enquiryController from "../controllers/enquiry.controller.js";
 import reportController from "../controllers/report.controller.js";
-import {
-  convertEnquirySchema,
-  updateBatchEndDateSchema,
-} from "../validators/enrollment.validator.js";
+import { updateBatchEndDateSchema } from "../validators/enrollment.validator.js";
 import { createPaymentSchema } from "../validators/payment.validator.js";
 import {
   createTestSchema,
@@ -40,10 +37,10 @@ const router = express.Router();
 
 router.use(authMiddleware, authorizeRoles("ADMIN", "SUPER_ADMIN"));
 
+router.get("/enrollments", asyncHandler(enrollmentController.listEnrollments));
 router.post(
-  "/enrollments/convert-enquiry",
-  validate(convertEnquirySchema),
-  asyncHandler(enrollmentController.convertEnquiry),
+  "/enrollments",
+  asyncHandler(enrollmentController.createEnrollment),
 );
 router.get(
   "/enrollments/:enrollmentId",
