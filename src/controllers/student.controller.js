@@ -26,14 +26,9 @@ async function approveStudent(req, res) {
   return ok(res, student, 'Student approved');
 }
 
-async function addCertification(req, res) {
-  const certification = await studentService.addCertification(req.user.id, req.validated.body);
-  return ok(res, certification, 'Certification added', 201);
-}
-
-async function deleteCertification(req, res) {
-  const result = await studentService.removeCertification(req.user.id, req.params.id);
-  return ok(res, result, 'Certification deleted');
+async function uploadProfilePhoto(req, res) {
+  const profile = await studentService.uploadProfilePhoto(req.user.id, req.file);
+  return ok(res, profile, 'Profile photo updated');
 }
 
 async function uploadProject(req, res) {
@@ -46,16 +41,21 @@ async function uploadCv(req, res) {
   return ok(res, cv, 'CV uploaded', 201);
 }
 
+async function uploadCertificate(req, res) {
+  const result = await studentService.uploadCertificate(req.user.id, req.file);
+  return ok(res, result, 'Certificate uploaded', 201);
+}
+
 export {
   signup,
   updateMyProfile,
   getMyProfile,
   getStudentProfile,
   approveStudent,
-  addCertification,
-  deleteCertification,
+  uploadProfilePhoto,
   uploadProject,
   uploadCv,
+  uploadCertificate,
 };
 
 export default {
@@ -64,8 +64,8 @@ export default {
   getMyProfile,
   getStudentProfile,
   approveStudent,
-  addCertification,
-  deleteCertification,
+  uploadProfilePhoto,
   uploadProject,
   uploadCv,
+  uploadCertificate,
 };

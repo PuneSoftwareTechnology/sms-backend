@@ -4,7 +4,6 @@ import ApiError from "../utils/apiError.js";
 import userRepository from "../repositories/user.repository.js";
 import studentRepository from "../repositories/student.repository.js";
 import enrollmentRepository from "../repositories/enrollment.repository.js";
-import emailService from "./email.service.js";
 import s3Service from "../utils/s3.service.js";
 
 async function signup(payload) {
@@ -27,13 +26,13 @@ async function signup(payload) {
     );
   }
 
-  // 3. Check enrollment is approved
-  if (enrollment.enrollment_status !== "APPROVED") {
-    throw new ApiError(
-      403,
-      "Your enrollment is not yet approved. Please contact admin for approval.",
-    );
-  }
+  // // 3. Check enrollment is approved
+  // if (enrollment.enrollment_status !== "APPROVED") {
+  //   throw new ApiError(
+  //     403,
+  //     "Your enrollment is not yet approved. Please contact admin for approval.",
+  //   );
+  // }
 
   // 5. Activate: update password and mark email as verified (admin already validated identity)
   const passwordHash = await bcrypt.hash(payload.password, 10);
@@ -61,11 +60,68 @@ async function signup(payload) {
 }
 
 async function updateProfile(userId, payload) {
-  const profile = await studentRepository.updateProfile(userId, payload);
-  if (!profile) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Update name/phone in users table if provided
+    if (payload.name || payload.phone) {
+      const userFields = [];
+      const userValues = [];
+      if (payload.name) {
+        userValues.push(payload.name);
+        userFields.push(`name = $${userValues.length}`);
+      }
+      if (payload.phone) {
+        userValues.push(payload.phone);
+        userFields.push(`phone = $${userValues.length}`);
+      }
+      userValues.push(userId);
+      await client.query(
+        `UPDATE users SET ${userFields.join(", ")}, updated_at = NOW() WHERE id = $${userValues.length}`,
+        userValues,
+      );
+    }
+
+    // Update student_profiles table
+    const profile = await studentRepository.updateProfile(userId, payload, client);
+    if (!profile) {
+      throw new ApiError(404, "Student profile not found");
+    }
+
+    await client.query("COMMIT");
+
+    // Return the full combined profile
+    return studentRepository.findFullProfile(userId);
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function uploadProfilePhoto(studentId, file) {
+  if (!file) {
+    throw new ApiError(400, "Profile photo is required");
+  }
+
+  const oldProfile = await studentRepository.findFullProfile(studentId);
+  const oldPhotoUrl = oldProfile?.profilePhoto;
+
+  const key = `profile-photos/${studentId}/${Date.now()}_${file.originalname}`;
+  const photoUrl = await s3Service.uploadBuffer(file.buffer, key, file.mimetype);
+
+  const updated = await studentRepository.updatePhotoUrl(studentId, photoUrl);
+  if (!updated) {
     throw new ApiError(404, "Student profile not found");
   }
-  return profile;
+
+  if (oldPhotoUrl) {
+    await s3Service.deleteObjectByUrl(oldPhotoUrl);
+  }
+
+  return studentRepository.findFullProfile(studentId);
 }
 
 async function getProfile(userId, currentUser) {
@@ -87,36 +143,6 @@ async function approveStudent(studentId) {
     throw new ApiError(404, "Student not found");
   }
   return approved;
-}
-
-async function addCertification(studentId, payload) {
-  const certification = await studentRepository.createCertification({
-    studentId,
-    title: payload.title,
-    issuer: payload.issuer,
-    issueDate: payload.issueDate,
-  });
-
-  const student = await userRepository.findById(studentId);
-  if (student) {
-    await emailService.sendCertificateEmail({
-      to: student.email,
-      certificateUrl: "",
-    });
-  }
-
-  return certification;
-}
-
-async function removeCertification(studentId, certificationId) {
-  const deleted = await studentRepository.deleteCertification(
-    certificationId,
-    studentId,
-  );
-  if (!deleted) {
-    throw new ApiError(404, "Certification not found");
-  }
-  return deleted;
 }
 
 async function uploadProject(studentId, file) {
@@ -148,24 +174,34 @@ async function uploadCv(studentId, file) {
   return cv;
 }
 
+async function uploadCertificate(studentId, file) {
+  if (!file) {
+    throw new ApiError(400, "Certificate file is required");
+  }
+
+  const key = `certificates/${studentId}/${Date.now()}_${file.originalname}`;
+  const fileUrl = await s3Service.uploadBuffer(file.buffer, key, file.mimetype);
+  return { url: fileUrl };
+}
+
 export {
   signup,
   updateProfile,
+  uploadProfilePhoto,
   getProfile,
   approveStudent,
-  addCertification,
-  removeCertification,
   uploadProject,
   uploadCv,
+  uploadCertificate,
 };
 
 export default {
   signup,
   updateProfile,
+  uploadProfilePhoto,
   getProfile,
   approveStudent,
-  addCertification,
-  removeCertification,
   uploadProject,
   uploadCv,
+  uploadCertificate,
 };

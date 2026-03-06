@@ -6,6 +6,24 @@ EXCEPTION
   WHEN duplicate_object THEN null;
 END $$;
 
+DO $$ BEGIN
+  CREATE TYPE employment_status_enum AS ENUM ('EMPLOYED', 'UNEMPLOYED', 'FREELANCER');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE lead_status_enum AS ENUM ('NEW', 'CONTACTED', 'QUALIFIED', 'CONVERTED', 'LOST');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE demo_status_enum AS ENUM ('PENDING', 'SCHEDULED', 'COMPLETED', 'CANCELLED');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
@@ -25,15 +43,24 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_email_verified BOOLEAN NOT NULL DEFAULT false;
 
 CREATE TABLE IF NOT EXISTS student_profiles (
-  user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-  city TEXT,
-  area TEXT,
-  graduation TEXT,
-  post_graduation TEXT,
-  employment_status TEXT,
-  it_exp_years NUMERIC(5,2),
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  city VARCHAR(100),
+  area VARCHAR(100),
+  photo_url TEXT,
+  graduation VARCHAR(150),
+  graduation_year INT,
+  post_graduation VARCHAR(150),
+  pg_year INT,
+  employment_status employment_status_enum,
+  last_work_year INT,
+  it_exp_years INT DEFAULT 0,
+  it_exp_months INT DEFAULT 0,
+  non_it_exp_years INT DEFAULT 0,
+  non_it_exp_months INT DEFAULT 0,
+  certifications JSONB DEFAULT '[]',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS email_verifications (
@@ -162,9 +189,8 @@ CREATE TABLE IF NOT EXISTS cvs (
 CREATE TABLE IF NOT EXISTS certifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  issuer TEXT,
-  issue_date DATE,
+  name TEXT NOT NULL,
+  url TEXT NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -199,8 +225,6 @@ CREATE TABLE IF NOT EXISTS recruiter_shortlists (
   UNIQUE(recruiter_id, student_id, course)
 );
 
-CREATE TRIGGER trg_recruiter_profiles_updated_at BEFORE UPDATE ON recruiter_profiles FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_enrollments_course ON enrollments(course);
 CREATE INDEX IF NOT EXISTS idx_enrollments_batch ON enrollments(batch);
@@ -230,3 +254,6 @@ CREATE TRIGGER trg_enrollments_updated_at BEFORE UPDATE ON enrollments FOR EACH 
 
 DROP TRIGGER IF EXISTS trg_cvs_updated_at ON cvs;
 CREATE TRIGGER trg_cvs_updated_at BEFORE UPDATE ON cvs FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_recruiter_profiles_updated_at ON recruiter_profiles;
+CREATE TRIGGER trg_recruiter_profiles_updated_at BEFORE UPDATE ON recruiter_profiles FOR EACH ROW EXECUTE FUNCTION set_updated_at();

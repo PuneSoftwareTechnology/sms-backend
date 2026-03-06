@@ -8,6 +8,12 @@ const allowedMimeTypes = new Set([
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]);
 
+const imageMimeTypes = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -22,4 +28,19 @@ const upload = multer({
   },
 });
 
+const imageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+  },
+  fileFilter: (_req, file, cb) => {
+    if (!imageMimeTypes.has(file.mimetype)) {
+      cb(new ApiError(400, 'Only JPEG, PNG and WebP images are allowed'));
+      return;
+    }
+    cb(null, true);
+  },
+});
+
+export { imageUpload };
 export default upload;
