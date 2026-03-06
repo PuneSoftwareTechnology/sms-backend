@@ -1,7 +1,12 @@
 import reportRepository from '../repositories/report.repository.js';
+import enrollmentRepository from '../repositories/enrollment.repository.js';
 
 async function candidateFilter(filters) {
-  return reportRepository.candidateFilterReport(filters);
+  const [items, courses] = await Promise.all([
+    reportRepository.candidateFilterReport(filters),
+    enrollmentRepository.getDistinctCourses(),
+  ]);
+  return { items, courses };
 }
 
 async function feeDue(days) {

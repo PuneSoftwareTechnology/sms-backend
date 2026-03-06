@@ -2,7 +2,7 @@ import pool from "../config/db.js";
 
 async function listEnrollments(filters = {}, client = pool) {
   const values = [];
-  const conditions = ["1=1"];
+  const conditions = ["e.deleted = FALSE"];
 
   if (filters.enrollment_status) {
     values.push(filters.enrollment_status);
@@ -85,6 +85,84 @@ async function updateBatchEndDate(batch, endDate, client = pool) {
   );
 }
 
+async function findByEmail(email, client = pool) {
+  const { rows } = await client.query(
+    `SELECT e.* FROM enrollments e
+     JOIN users u ON e.student_id = u.id
+     WHERE u.email = $1 LIMIT 1`,
+    [email],
+  );
+  return rows[0] || null;
+}
+
+async function getDistinctCourses(client = pool) {
+  const { rows } = await client.query(
+    "SELECT DISTINCT course FROM enrollments WHERE course IS NOT NULL ORDER BY course",
+  );
+  return rows.map((r) => r.course);
+}
+
+async function updateEnrollment(id, payload, client = pool) {
+  const fields = [];
+  const values = [];
+
+  const enrollmentFields = [
+    "institute",
+    "course",
+    "batch",
+    "trainer",
+    "start_date",
+    "end_date",
+    "completion_status",
+    "enrollment_status",
+    "total_fee",
+    "placement_status",
+    "company_name",
+    "certificate_url",
+    "installment1_amount",
+    "installment1_date",
+    "installment1_mode",
+    "installment2_amount",
+    "installment2_date",
+    "installment2_mode",
+    "installment3_amount",
+    "installment3_date",
+    "installment3_mode",
+  ];
+
+  const dateFields = new Set([
+    "start_date", "end_date",
+    "installment1_date", "installment2_date", "installment3_date",
+  ]);
+
+  for (const field of enrollmentFields) {
+    if (payload[field] !== undefined) {
+      const value = dateFields.has(field) && payload[field] === "" ? null : payload[field];
+      values.push(value);
+      fields.push(`${field} = $${values.length}`);
+    }
+  }
+
+  if (fields.length === 0) return null;
+
+  fields.push("updated_at = NOW()");
+  values.push(id);
+
+  const { rows } = await client.query(
+    `UPDATE enrollments SET ${fields.join(", ")} WHERE id = $${values.length} RETURNING *`,
+    values,
+  );
+  return rows[0] || null;
+}
+
+async function softDeleteEnrollment(id, client = pool) {
+  const { rows } = await client.query(
+    "UPDATE enrollments SET deleted = TRUE, updated_at = NOW() WHERE id = $1 RETURNING id",
+    [id],
+  );
+  return rows[0] || null;
+}
+
 async function markBatchCompleted(batch, client = pool) {
   await client.query(
     "UPDATE enrollments SET completion_status = 'COMPLETED', updated_at = NOW() WHERE batch = $1",
@@ -96,14 +174,22 @@ export {
   listEnrollments,
   createEnrollment,
   findEnrollmentDetailsById,
+  findByEmail,
+  getDistinctCourses,
   updateBatchEndDate,
   markBatchCompleted,
+  updateEnrollment,
+  softDeleteEnrollment,
 };
 
 export default {
   listEnrollments,
   createEnrollment,
   findEnrollmentDetailsById,
+  findByEmail,
+  getDistinctCourses,
   updateBatchEndDate,
   markBatchCompleted,
+  updateEnrollment,
+  softDeleteEnrollment,
 };

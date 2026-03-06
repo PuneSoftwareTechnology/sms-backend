@@ -26,6 +26,11 @@ async function getEnrollmentById(req, res) {
   return ok(res, details, "Enrollment details fetched");
 }
 
+async function getDistinctCourses(req, res) {
+  const courses = await enrollmentService.getDistinctCourses();
+  return ok(res, courses, "Courses fetched");
+}
+
 async function updateBatchEndDate(req, res) {
   const result = await enrollmentService.updateBatchEndDate(
     req.params.batch,
@@ -34,16 +39,35 @@ async function updateBatchEndDate(req, res) {
   return ok(res, result, "Batch updated and enrollment completion cascaded");
 }
 
+async function updateEnrollment(req, res) {
+  const result = await enrollmentService.updateEnrollment(
+    req.params.enrollmentId,
+    req.body,
+  );
+  return ok(res, result, "Enrollment updated successfully");
+}
+
+async function deleteEnrollment(req, res) {
+  await enrollmentService.softDeleteEnrollment(req.params.enrollmentId);
+  return ok(res, null, "Enrollment deleted successfully");
+}
+
 export {
   listEnrollments,
   createEnrollment,
   getEnrollmentById,
+  getDistinctCourses,
   updateBatchEndDate,
+  updateEnrollment,
+  deleteEnrollment,
 };
 
 export default {
   listEnrollments,
   createEnrollment,
   getEnrollmentById,
+  getDistinctCourses,
   updateBatchEndDate,
+  updateEnrollment,
+  deleteEnrollment,
 };

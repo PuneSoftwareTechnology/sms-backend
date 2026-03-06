@@ -1,54 +1,44 @@
-import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import pool from '../config/db.js';
 import ApiError from '../utils/apiError.js';
 import userRepository from '../repositories/user.repository.js';
 import studentRepository from '../repositories/student.repository.js';
-import authTokenRepository from '../repositories/authToken.repository.js';
+import enrollmentRepository from '../repositories/enrollment.repository.js';
 import emailService from './email.service.js';
 import s3Service from '../utils/s3.service.js';
 
 async function signup(payload) {
-  const existing = await userRepository.findByEmail(payload.email);
-  if (existing) {
-    throw new ApiError(409, 'Email already exists');
+  // 1. Check if a user with this email was pre-enrolled by admin
+  const existingUser = await userRepository.findByEmail(payload.email);
+
+  if (!existingUser) {
+    throw new ApiError(400, 'You are not enrolled. Please contact admin to enroll first.');
   }
 
+  // 2. Verify this user has an enrollment record
+  const enrollment = await enrollmentRepository.findByEmail(payload.email);
+  if (!enrollment) {
+    throw new ApiError(400, 'No enrollment found for this email. Please contact admin.');
+  }
+
+  // 3. If already verified, they should login instead
+  if (existingUser.is_email_verified) {
+    throw new ApiError(409, 'Account already activated. Please login.');
+  }
+
+  // 4. Activate: update password and mark email as verified (admin already validated identity)
   const passwordHash = await bcrypt.hash(payload.password, 10);
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    const user = await userRepository.createUser(
-      {
-        name: payload.name,
-        email: payload.email,
-        phone: payload.phone,
-        passwordHash,
-        role: 'STUDENT',
-        isActive: true,
-        isApproved: false,
-        isEmailVerified: false,
-      },
-      client,
-    );
-
-    await studentRepository.createEmptyProfile(user.id, client);
-
-    const verificationToken = crypto.randomBytes(24).toString('hex');
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24);
-    await authTokenRepository.createEmailVerification(user.id, verificationToken, expiresAt, client);
+    await userRepository.updatePasswordHash(existingUser.id, passwordHash, client);
+    await userRepository.setEmailVerified(existingUser.id, client);
 
     await client.query('COMMIT');
 
-    await emailService.sendSignupVerificationEmail({
-      to: user.email,
-      name: user.name,
-      token: verificationToken,
-    });
-
-    return user;
+    return existingUser;
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;

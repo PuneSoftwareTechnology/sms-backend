@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import ApiError from "../utils/apiError.js";
 import pool from "../config/db.js";
 import recruiterRepository from "../repositories/recruiter.repository.js";
+import enrollmentRepository from "../repositories/enrollment.repository.js";
 import userRepository from "../repositories/user.repository.js";
 import emailService from "./email.service.js";
 import s3Service from "../utils/s3.service.js";
@@ -9,7 +10,11 @@ import s3Service from "../utils/s3.service.js";
 const MAX_DOWNLOADS = 100;
 
 async function filterCandidates(filters) {
-  return recruiterRepository.findCandidates(filters);
+  const [items, courses] = await Promise.all([
+    recruiterRepository.findCandidates(filters),
+    enrollmentRepository.getDistinctCourses(),
+  ]);
+  return { items, courses };
 }
 
 async function downloadCv(recruiterId, studentId) {

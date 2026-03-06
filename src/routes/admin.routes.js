@@ -10,7 +10,8 @@ import studentController from "../controllers/student.controller.js";
 import recruiterController from "../controllers/recruiter.controller.js";
 import enquiryController from "../controllers/enquiry.controller.js";
 import reportController from "../controllers/report.controller.js";
-import { updateBatchEndDateSchema } from "../validators/enrollment.validator.js";
+import qrController from "../controllers/qr.controller.js";
+import { updateBatchEndDateSchema, updateEnrollmentSchema } from "../validators/enrollment.validator.js";
 import { createPaymentSchema } from "../validators/payment.validator.js";
 import {
   createTestSchema,
@@ -46,6 +47,16 @@ router.get(
   "/enrollments/:enrollmentId",
   validate(enrollmentIdParamSchema),
   asyncHandler(enrollmentController.getEnrollmentById),
+);
+router.put(
+  "/enrollments/:enrollmentId",
+  validate(updateEnrollmentSchema),
+  asyncHandler(enrollmentController.updateEnrollment),
+);
+router.delete(
+  "/enrollments/:enrollmentId",
+  validate(enrollmentIdParamSchema),
+  asyncHandler(enrollmentController.deleteEnrollment),
 );
 router.put(
   "/enrollments/batches/:batch/end-date",
@@ -138,5 +149,7 @@ router.get(
   "/reports/enrollment-figures",
   asyncHandler(reportController.enrollmentFigures),
 );
+
+router.get("/qr-codes", asyncHandler(qrController.listQr));
 
 export default router;
