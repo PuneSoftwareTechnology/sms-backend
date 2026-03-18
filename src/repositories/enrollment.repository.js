@@ -155,6 +155,19 @@ async function updateEnrollment(id, payload, client = pool) {
   return rows[0] || null;
 }
 
+async function findByStudentId(studentId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT e.*, u.name, u.email, u.phone
+     FROM enrollments e
+     LEFT JOIN users u ON e.student_id = u.id
+     WHERE e.student_id = $1 AND e.deleted = FALSE
+     ORDER BY e.created_at DESC
+     LIMIT 1`,
+    [studentId],
+  );
+  return rows[0] || null;
+}
+
 async function softDeleteEnrollment(id, client = pool) {
   const { rows } = await client.query(
     "UPDATE enrollments SET deleted = TRUE, updated_at = NOW() WHERE id = $1 RETURNING id",
@@ -175,6 +188,7 @@ export {
   createEnrollment,
   findEnrollmentDetailsById,
   findByEmail,
+  findByStudentId,
   getDistinctCourses,
   updateBatchEndDate,
   markBatchCompleted,
@@ -187,6 +201,7 @@ export default {
   createEnrollment,
   findEnrollmentDetailsById,
   findByEmail,
+  findByStudentId,
   getDistinctCourses,
   updateBatchEndDate,
   markBatchCompleted,

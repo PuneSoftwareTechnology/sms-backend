@@ -4,6 +4,7 @@ import userRepository from '../repositories/user.repository.js';
 const allowedRoutes = [
   { method: 'GET', pathPrefix: '/api/student/profile' },
   { method: 'PUT', pathPrefix: '/api/student/profile' },
+  { method: 'GET', pathPrefix: '/api/student/payments' },
 ];
 
 async function studentApprovalMiddleware(req, res, next) {

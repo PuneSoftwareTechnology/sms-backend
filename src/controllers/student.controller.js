@@ -12,7 +12,7 @@ async function updateMyProfile(req, res) {
 }
 
 async function getMyProfile(req, res) {
-  const profile = await studentService.getProfile(req.user.id, req.user);
+  const profile = await studentService.getMyFullProfile(req.user.id);
   return ok(res, profile, 'Profile fetched');
 }
 

@@ -12,6 +12,11 @@ const cacheMiddleware = (ttl) => (req, res, next) => {
     return next();
   }
 
+  // Skip caching for authenticated routes — they return per-user data
+  if (req.headers.authorization) {
+    return next();
+  }
+
   const key = req.originalUrl || req.url;
   const cachedResponse = cache.get(key);
 

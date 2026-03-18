@@ -26,6 +26,17 @@ async function sumPaidAmount(enrollmentId, client = pool) {
   return Number(rows[0].paid_amount || 0);
 }
 
-export { createPayment, sumPaidAmount };
+async function findByEnrollmentId(enrollmentId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT installment_number, amount, payment_date, receipt_url
+     FROM payments
+     WHERE enrollment_id = $1
+     ORDER BY installment_number`,
+    [enrollmentId],
+  );
+  return rows;
+}
 
-export default { createPayment, sumPaidAmount };
+export { createPayment, sumPaidAmount, findByEnrollmentId };
+
+export default { createPayment, sumPaidAmount, findByEnrollmentId };

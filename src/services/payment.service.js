@@ -1,3 +1,4 @@
+import pool from '../config/db.js';
 import ApiError from '../utils/apiError.js';
 import paymentRepository from '../repositories/payment.repository.js';
 import enrollmentRepository from '../repositories/enrollment.repository.js';
@@ -10,6 +11,20 @@ async function addPayment(payload) {
   }
 
   const payment = await paymentRepository.createPayment(payload);
+
+  // Sync installment data back to enrollment table so student summary stays consistent
+  const num = payload.installmentNumber;
+  if (num >= 1 && num <= 3) {
+    await pool.query(
+      `UPDATE enrollments
+       SET installment${num}_amount = $1,
+           installment${num}_date   = $2,
+           updated_at = NOW()
+       WHERE id = $3`,
+      [payment.amount, payment.payment_date, payload.enrollmentId],
+    );
+  }
+
   const paidAmount = await paymentRepository.sumPaidAmount(payload.enrollmentId);
   const pendingAmount = Number(enrollment.total_fee) - paidAmount;
 

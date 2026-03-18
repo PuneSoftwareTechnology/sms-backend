@@ -20,8 +20,19 @@ app.use(
 );
 app.use(compression());
 app.use(express.json());
-app.use((req, _res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+app.use((req, res, next) => {
+  const start = Date.now();
+  const { method, originalUrl } = req;
+
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    const status = res.statusCode;
+    const cached = res.getHeader("X-Cache") || "-";
+    console.log(
+      `[${new Date().toISOString()}] ${method} ${originalUrl} → ${status} (${duration}ms) cache:${cached}`,
+    );
+  });
+
   next();
 });
 app.use("/api", routes);

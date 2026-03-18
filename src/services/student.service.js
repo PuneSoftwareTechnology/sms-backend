@@ -4,6 +4,7 @@ import ApiError from "../utils/apiError.js";
 import userRepository from "../repositories/user.repository.js";
 import studentRepository from "../repositories/student.repository.js";
 import enrollmentRepository from "../repositories/enrollment.repository.js";
+import paymentRepository from "../repositories/payment.repository.js";
 import s3Service from "../utils/s3.service.js";
 
 async function signup(payload) {
@@ -84,7 +85,11 @@ async function updateProfile(userId, payload) {
     }
 
     // Update student_profiles table
-    const profile = await studentRepository.updateProfile(userId, payload, client);
+    const profile = await studentRepository.updateProfile(
+      userId,
+      payload,
+      client,
+    );
     if (!profile) {
       throw new ApiError(404, "Student profile not found");
     }
@@ -110,7 +115,11 @@ async function uploadProfilePhoto(studentId, file) {
   const oldPhotoUrl = oldProfile?.profilePhoto;
 
   const key = `profile-photos/${studentId}/${Date.now()}_${file.originalname}`;
-  const photoUrl = await s3Service.uploadBuffer(file.buffer, key, file.mimetype);
+  const photoUrl = await s3Service.uploadBuffer(
+    file.buffer,
+    key,
+    file.mimetype,
+  );
 
   const updated = await studentRepository.updatePhotoUrl(studentId, photoUrl);
   if (!updated) {
@@ -174,6 +183,86 @@ async function uploadCv(studentId, file) {
   return cv;
 }
 
+async function getMyFullProfile(studentId) {
+  const profile = await studentRepository.findFullProfile(studentId);
+  if (!profile) {
+    throw new ApiError(404, "Profile not found");
+  }
+
+  const enrollment = await enrollmentRepository.findByStudentId(studentId);
+
+  // Fetch payment data, QR code, and CV in parallel
+  const [qrResult, payments, cv] = await Promise.all([
+    pool.query(
+      "SELECT image_url, bank_name FROM qr_codes WHERE is_active = true LIMIT 1",
+    ),
+    enrollment
+      ? paymentRepository.findByEnrollmentId(enrollment.id)
+      : Promise.resolve([]),
+    studentRepository.findCvByStudentId(studentId),
+  ]);
+
+  const activeQr = qrResult.rows[0] || null;
+
+  // Build payment summary
+  let paymentSummary = null;
+  if (enrollment) {
+    const paymentsByInstallment = {};
+    for (const p of payments) {
+      paymentsByInstallment[p.installment_number] = p;
+    }
+
+    const getInstallment = (num) => {
+      const pmtRow = paymentsByInstallment[num];
+      const enrollAmt = enrollment[`installment${num}_amount`];
+      const enrollDate = enrollment[`installment${num}_date`];
+      const enrollMode = enrollment[`installment${num}_mode`];
+
+      const amount = pmtRow
+        ? Number(pmtRow.amount)
+        : enrollAmt
+          ? Number(enrollAmt)
+          : undefined;
+      const date = pmtRow ? pmtRow.payment_date : enrollDate || undefined;
+      const mode = enrollMode || undefined;
+
+      return { amount, date, mode };
+    };
+
+    const inst1 = getInstallment(1);
+    const inst2 = getInstallment(2);
+    const inst3 = getInstallment(3);
+
+    const paid =
+      (inst1.amount || 0) + (inst2.amount || 0) + (inst3.amount || 0);
+
+    paymentSummary = {
+      total_fee: Number(enrollment.total_fee || 0),
+      paid_amount: paid,
+      pending_amount: Number(enrollment.total_fee || 0) - paid,
+      qr_code_url: activeQr?.image_url || "",
+      qr_bank_name: activeQr?.bank_name || "",
+      installment1_amount: inst1.amount,
+      installment1_date: inst1.date,
+      installment1_mode: inst1.mode,
+      installment2_amount: inst2.amount,
+      installment2_date: inst2.date,
+      installment2_mode: inst2.mode,
+      installment3_amount: inst3.amount,
+      installment3_date: inst3.date,
+      installment3_mode: inst3.mode,
+    };
+  }
+
+  return {
+    ...profile,
+    payments: paymentSummary,
+    evaluations: [],
+    cvTemplates: [],
+    cv: cv ? { url: cv.file_url } : null,
+  };
+}
+
 async function uploadCertificate(studentId, file) {
   if (!file) {
     throw new ApiError(400, "Certificate file is required");
@@ -189,6 +278,7 @@ export {
   updateProfile,
   uploadProfilePhoto,
   getProfile,
+  getMyFullProfile,
   approveStudent,
   uploadProject,
   uploadCv,
@@ -200,6 +290,7 @@ export default {
   updateProfile,
   uploadProfilePhoto,
   getProfile,
+  getMyFullProfile,
   approveStudent,
   uploadProject,
   uploadCv,

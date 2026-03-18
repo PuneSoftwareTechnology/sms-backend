@@ -2,8 +2,8 @@ import pool from '../config/db.js';
 
 async function createQr(payload, client = pool) {
   const { rows } = await client.query(
-    'INSERT INTO qr_codes (label, image_url, is_active) VALUES ($1, $2, false) RETURNING *',
-    [payload.label || null, payload.imageUrl || null],
+    'INSERT INTO qr_codes (image_url, is_active) VALUES ($1, false) RETURNING *',
+    [payload.imageUrl || null],
   );
   return rows[0];
 }
