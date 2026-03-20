@@ -33,23 +33,29 @@ async function candidateFilterReport(filters = {}, client = pool) {
   return rows;
 }
 
-async function feeDueReport(days, client = pool) {
+async function feeDueReport(client = pool) {
   const { rows } = await client.query(
     `
       SELECT
-        e.id AS enrollment_id,
-        e.student_id,
-        e.total_fee,
-        COALESCE(SUM(p.amount), 0) AS paid_amount,
-        (e.total_fee - COALESCE(SUM(p.amount), 0)) AS pending_amount,
-        CURRENT_DATE - MAX(p.payment_date) AS days_since_last_payment
+        e.id            AS "id",
+        u.name          AS "name",
+        e.course        AS "course",
+        e.completion_status AS "completionStatus",
+        u.phone         AS "phone",
+        e.total_fee     AS "totalFee",
+        (COALESCE(e.installment1_amount, 0) + COALESCE(e.installment2_amount, 0) + COALESCE(e.installment3_amount, 0))::numeric AS "paidAmount",
+        (e.total_fee - COALESCE(e.installment1_amount, 0) - COALESCE(e.installment2_amount, 0) - COALESCE(e.installment3_amount, 0))::numeric AS "pendingAmount",
+        COALESCE(
+          CURRENT_DATE - GREATEST(e.installment1_date, e.installment2_date, e.installment3_date),
+          CURRENT_DATE - e.start_date::date
+        )::int AS "daysSinceLastPayment"
       FROM enrollments e
-      LEFT JOIN payments p ON e.id = p.enrollment_id
-      GROUP BY e.id, e.student_id, e.total_fee
-      HAVING (CURRENT_DATE - COALESCE(MAX(p.payment_date), CURRENT_DATE - ($1::int + 1))) >= $1::int
-      ORDER BY pending_amount DESC
+      JOIN users u ON e.student_id = u.id
+      WHERE e.deleted = FALSE
+        AND (e.total_fee - COALESCE(e.installment1_amount, 0) - COALESCE(e.installment2_amount, 0) - COALESCE(e.installment3_amount, 0)) > 0
+      ORDER BY "pendingAmount" DESC
     `,
-    [days],
+    [],
   );
   return rows;
 }

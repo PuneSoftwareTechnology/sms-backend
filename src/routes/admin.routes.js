@@ -141,7 +141,7 @@ router.get(
   asyncHandler(reportController.candidateFilter),
 );
 router.get(
-  "/reports/fee-due",
+  "/reports/fee-dues",
   validate(feeDueSchema),
   asyncHandler(reportController.feeDue),
 );

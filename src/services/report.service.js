@@ -9,8 +9,8 @@ async function candidateFilter(filters) {
   return { items, courses };
 }
 
-async function feeDue(days) {
-  return reportRepository.feeDueReport(days);
+async function feeDue() {
+  return reportRepository.feeDueReport();
 }
 
 async function enrollmentFigures() {

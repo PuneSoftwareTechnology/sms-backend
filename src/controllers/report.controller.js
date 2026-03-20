@@ -11,8 +11,7 @@ async function candidateFilter(req, res) {
 }
 
 async function feeDue(req, res) {
-  const days = Number(req.query.days || 30);
-  const rows = await reportService.feeDue(days);
+  const rows = await reportService.feeDue();
   return ok(res, rows, 'Fee due report fetched');
 }
 
