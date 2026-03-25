@@ -113,6 +113,7 @@ router.delete(
   validate(uuidIdParamSchema),
   asyncHandler(recruiterController.deleteRecruiter),
 );
+router.get("/recruiter-shortlist", asyncHandler(recruiterController.getAdminShortlist));
 
 router.get(
   "/enquiries",

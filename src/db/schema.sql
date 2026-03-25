@@ -220,9 +220,12 @@ CREATE TABLE IF NOT EXISTS recruiter_shortlists (
   recruiter_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   student_id UUID NOT NULL REFERENCES users(id),
   course TEXT NOT NULL,
+  shortlisted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(recruiter_id, student_id, course)
 );
+
+ALTER TABLE recruiter_shortlists ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_enrollments_course ON enrollments(course);

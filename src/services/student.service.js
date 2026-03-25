@@ -27,13 +27,13 @@ async function signup(payload) {
     );
   }
 
-  // // 3. Check enrollment is approved
-  // if (enrollment.enrollment_status !== "APPROVED") {
-  //   throw new ApiError(
-  //     403,
-  //     "Your enrollment is not yet approved. Please contact admin for approval.",
-  //   );
-  // }
+  // 3. Check enrollment is approved
+  if (enrollment.enrollment_status !== "APPROVED") {
+    throw new ApiError(
+      403,
+      "Your enrollment is not yet approved. Please contact admin for approval.",
+    );
+  }
 
   // 5. Activate: update password and mark email as verified (admin already validated identity)
   const passwordHash = await bcrypt.hash(payload.password, 10);

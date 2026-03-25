@@ -9,12 +9,14 @@ import s3Service from "../utils/s3.service.js";
 
 const MAX_DOWNLOADS = 100;
 
-async function filterCandidates(filters) {
-  const [items, courses] = await Promise.all([
-    recruiterRepository.findCandidates(filters),
+async function filterCandidates(filters, recruiterId) {
+  const [items, courses, cities, experienceYears] = await Promise.all([
+    recruiterRepository.findCandidates(filters, recruiterId),
     enrollmentRepository.getDistinctCourses(),
+    recruiterRepository.getDistinctCities(),
+    recruiterRepository.getDistinctExperienceYears(),
   ]);
-  return { items, courses };
+  return { items, courses, cities, experienceYears };
 }
 
 async function downloadCv(recruiterId, studentId) {
@@ -57,6 +59,42 @@ async function shortlistCandidate(payload) {
   const row = await recruiterRepository.insertShortlist(payload);
   await emailService.sendShortlistNotification(payload);
   return row;
+}
+
+async function removeShortlist(recruiterId, studentId) {
+  const removed = await recruiterRepository.removeShortlist(recruiterId, studentId);
+  if (!removed) {
+    throw new ApiError(404, "Shortlist entry not found");
+  }
+  return removed;
+}
+
+async function getRecruiterShortlist(recruiterId) {
+  return recruiterRepository.getRecruiterShortlist(recruiterId);
+}
+
+async function getAdminRecruiterShortlist() {
+  return recruiterRepository.getAdminRecruiterShortlist();
+}
+
+async function bulkRemoveShortlist(recruiterId, studentIds) {
+  const removed = await recruiterRepository.bulkRemoveShortlist(recruiterId, studentIds);
+  return { removed };
+}
+
+async function bulkShortlist(recruiterId, items) {
+  const results = { shortlisted: 0, skipped: 0 };
+  for (const item of items) {
+    const payload = { recruiterId, studentId: item.studentId, course: item.course };
+    const exists = await recruiterRepository.shortlistExists(payload);
+    if (exists) {
+      results.skipped++;
+      continue;
+    }
+    await recruiterRepository.insertShortlist(payload);
+    results.shortlisted++;
+  }
+  return results;
 }
 
 async function createRecruiter(payload) {
@@ -103,6 +141,11 @@ export {
   downloadCv,
   getDownloadCount,
   shortlistCandidate,
+  bulkShortlist,
+  removeShortlist,
+  bulkRemoveShortlist,
+  getRecruiterShortlist,
+  getAdminRecruiterShortlist,
   createRecruiter,
   deleteRecruiter,
   getAllRecruiters,
@@ -113,6 +156,11 @@ export default {
   downloadCv,
   getDownloadCount,
   shortlistCandidate,
+  bulkShortlist,
+  removeShortlist,
+  bulkRemoveShortlist,
+  getRecruiterShortlist,
+  getAdminRecruiterShortlist,
   createRecruiter,
   deleteRecruiter,
   getAllRecruiters,

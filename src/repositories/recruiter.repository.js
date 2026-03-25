@@ -1,7 +1,7 @@
 import pool from "../config/db.js";
 
-async function findCandidates(filters = {}, client = pool) {
-  const values = [];
+async function findCandidates(filters = {}, recruiterId, client = pool) {
+  const values = [recruiterId];
   const conditions = ["u.role = 'STUDENT'", "u.is_approved = true"];
 
   if (filters.city) {
@@ -19,11 +19,21 @@ async function findCandidates(filters = {}, client = pool) {
 
   const { rows } = await client.query(
     `
-      SELECT u.id, u.name, sp.city, e.course, sp.it_exp_years, cv.file_url
+      SELECT
+        u.id,
+        u.name,
+        sp.city,
+        e.course,
+        COALESCE(sp.it_exp_years, 0)  AS "itExperienceYears",
+        COALESCE(sp.it_exp_months, 0) AS "itExperienceMonths",
+        cv.file_url                   AS "cvUrl",
+        CASE WHEN rs.id IS NOT NULL THEN true ELSE false END AS "isShortlisted"
       FROM users u
       JOIN student_profiles sp ON u.id = sp.user_id
       JOIN enrollments e ON u.id = e.student_id
       LEFT JOIN cvs cv ON u.id = cv.student_id
+      LEFT JOIN recruiter_shortlists rs
+        ON rs.student_id = u.id AND rs.recruiter_id = $1 AND rs.course = e.course
       WHERE ${conditions.join(" AND ")}
       ORDER BY u.created_at DESC
     `,
@@ -67,6 +77,84 @@ async function insertShortlist(payload, client = pool) {
     [payload.recruiterId, payload.studentId, payload.course],
   );
   return rows[0];
+}
+
+async function removeShortlist(recruiterId, studentId, client = pool) {
+  const { rows } = await client.query(
+    "DELETE FROM recruiter_shortlists WHERE recruiter_id = $1 AND student_id = $2 RETURNING id",
+    [recruiterId, studentId],
+  );
+  return rows[0] || null;
+}
+
+async function bulkRemoveShortlist(recruiterId, studentIds, client = pool) {
+  const { rowCount } = await client.query(
+    "DELETE FROM recruiter_shortlists WHERE recruiter_id = $1 AND student_id = ANY($2::uuid[])",
+    [recruiterId, studentIds],
+  );
+  return rowCount;
+}
+
+async function getRecruiterShortlist(recruiterId, client = pool) {
+  const { rows } = await client.query(
+    `
+      SELECT
+        rs.id,
+        rs.recruiter_id   AS "recruiterId",
+        ru.name            AS "recruiterName",
+        rs.course,
+        u.name             AS "studentName",
+        rs.student_id      AS "studentId",
+        COALESCE(rs.shortlisted_at, rs.created_at) AS "dateOfShortlist"
+      FROM recruiter_shortlists rs
+      JOIN users u  ON rs.student_id  = u.id
+      JOIN users ru ON rs.recruiter_id = ru.id
+      WHERE rs.recruiter_id = $1
+      ORDER BY COALESCE(rs.shortlisted_at, rs.created_at) DESC
+    `,
+    [recruiterId],
+  );
+  return rows;
+}
+
+async function getAdminRecruiterShortlist(client = pool) {
+  const { rows } = await client.query(
+    `
+      SELECT
+        rs.id,
+        rs.recruiter_id   AS "recruiterId",
+        ru.name            AS "recruiterName",
+        rs.course,
+        u.name             AS "studentName",
+        rs.student_id      AS "studentId",
+        COALESCE(rs.shortlisted_at, rs.created_at) AS "dateOfShortlist"
+      FROM recruiter_shortlists rs
+      JOIN users u  ON rs.student_id  = u.id
+      JOIN users ru ON rs.recruiter_id = ru.id
+      ORDER BY COALESCE(rs.shortlisted_at, rs.created_at) DESC
+    `,
+  );
+  return rows;
+}
+
+async function getDistinctCities(client = pool) {
+  const { rows } = await client.query(
+    `SELECT DISTINCT sp.city FROM student_profiles sp
+     JOIN users u ON u.id = sp.user_id
+     WHERE u.role = 'STUDENT' AND u.is_approved = true AND sp.city IS NOT NULL AND sp.city != ''
+     ORDER BY sp.city`
+  );
+  return rows.map((r) => r.city);
+}
+
+async function getDistinctExperienceYears(client = pool) {
+  const { rows } = await client.query(
+    `SELECT DISTINCT COALESCE(sp.it_exp_years, 0) AS years FROM student_profiles sp
+     JOIN users u ON u.id = sp.user_id
+     WHERE u.role = 'STUDENT' AND u.is_approved = true
+     ORDER BY years`
+  );
+  return rows.map((r) => r.years);
 }
 
 async function createRecruiter(payload, client = pool) {
@@ -149,6 +237,12 @@ export {
   insertDownloadLog,
   shortlistExists,
   insertShortlist,
+  removeShortlist,
+  bulkRemoveShortlist,
+  getRecruiterShortlist,
+  getAdminRecruiterShortlist,
+  getDistinctCities,
+  getDistinctExperienceYears,
   createRecruiter,
   findById,
   listAllRecruiters,
@@ -161,6 +255,12 @@ export default {
   insertDownloadLog,
   shortlistExists,
   insertShortlist,
+  removeShortlist,
+  bulkRemoveShortlist,
+  getRecruiterShortlist,
+  getAdminRecruiterShortlist,
+  getDistinctCities,
+  getDistinctExperienceYears,
   createRecruiter,
   findById,
   listAllRecruiters,

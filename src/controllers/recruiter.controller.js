@@ -10,8 +10,14 @@ async function filterCandidates(req, res) {
       : undefined,
   };
 
-  const candidates = await recruiterService.filterCandidates(filters);
+  const candidates = await recruiterService.filterCandidates(filters, req.user.id);
   return ok(res, candidates, "Candidates fetched");
+}
+
+async function downloadCvByParam(req, res) {
+  const { studentId } = req.validated.params;
+  const result = await recruiterService.downloadCv(req.user.id, studentId);
+  return ok(res, result, "CV download URL generated");
 }
 
 async function downloadCv(req, res) {
@@ -23,6 +29,43 @@ async function downloadCv(req, res) {
 async function getDownloadCount(req, res) {
   const result = await recruiterService.getDownloadCount(req.user.id);
   return ok(res, result, "Download count fetched");
+}
+
+async function shortlistByParam(req, res) {
+  const result = await recruiterService.shortlistCandidate({
+    recruiterId: req.user.id,
+    studentId: req.validated.params.studentId,
+    course: req.validated.body.course,
+  });
+  return ok(res, result, "Candidate shortlisted", 201);
+}
+
+async function removeShortlist(req, res) {
+  const result = await recruiterService.removeShortlist(
+    req.user.id,
+    req.validated.params.studentId,
+  );
+  return ok(res, result, "Shortlist removed");
+}
+
+async function getShortlist(req, res) {
+  const shortlist = await recruiterService.getRecruiterShortlist(req.user.id);
+  return ok(res, shortlist, "Shortlist fetched");
+}
+
+async function getAdminShortlist(req, res) {
+  const shortlist = await recruiterService.getAdminRecruiterShortlist();
+  return ok(res, shortlist, "Recruiter shortlist fetched");
+}
+
+async function bulkShortlist(req, res) {
+  const result = await recruiterService.bulkShortlist(req.user.id, req.validated.body.items);
+  return ok(res, result, `${result.shortlisted} candidates shortlisted`, 201);
+}
+
+async function bulkRemoveShortlist(req, res) {
+  const result = await recruiterService.bulkRemoveShortlist(req.user.id, req.validated.body.studentIds);
+  return ok(res, result, `${result.removed} candidates removed from shortlist`);
 }
 
 async function shortlist(req, res) {
@@ -52,8 +95,15 @@ async function getAllRecruiters(req, res) {
 export {
   filterCandidates,
   downloadCv,
+  downloadCvByParam,
   getDownloadCount,
   shortlist,
+  shortlistByParam,
+  bulkShortlist,
+  removeShortlist,
+  bulkRemoveShortlist,
+  getShortlist,
+  getAdminShortlist,
   createRecruiter,
   deleteRecruiter,
   getAllRecruiters,
@@ -62,8 +112,15 @@ export {
 export default {
   filterCandidates,
   downloadCv,
+  downloadCvByParam,
   getDownloadCount,
   shortlist,
+  shortlistByParam,
+  bulkShortlist,
+  removeShortlist,
+  bulkRemoveShortlist,
+  getShortlist,
+  getAdminShortlist,
   createRecruiter,
   deleteRecruiter,
   getAllRecruiters,
