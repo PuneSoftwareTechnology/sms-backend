@@ -259,3 +259,5 @@ CREATE TRIGGER trg_cvs_updated_at BEFORE UPDATE ON cvs FOR EACH ROW EXECUTE FUNC
 
 DROP TRIGGER IF EXISTS trg_recruiter_profiles_updated_at ON recruiter_profiles;
 CREATE TRIGGER trg_recruiter_profiles_updated_at BEFORE UPDATE ON recruiter_profiles FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS contacted_date DATE;

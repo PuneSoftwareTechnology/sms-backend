@@ -150,6 +150,14 @@ router.get(
   "/reports/enrollment-figures",
   asyncHandler(reportController.enrollmentFigures),
 );
+router.get(
+  "/reports/placement",
+  asyncHandler(reportController.placementReport),
+);
+router.put(
+  "/reports/placement/:enrollmentId",
+  asyncHandler(reportController.updatePlacementContact),
+);
 
 router.get("/qr-codes", asyncHandler(qrController.listQr));
 
