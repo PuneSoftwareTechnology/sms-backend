@@ -17,7 +17,7 @@ async function getMyProfile(req, res) {
 }
 
 async function getStudentProfile(req, res) {
-  const profile = await studentService.getProfile(req.params.userId, req.user);
+  const profile = await studentService.getMyFullProfile(req.params.userId);
   return ok(res, profile, 'Profile fetched');
 }
 
