@@ -7,6 +7,12 @@ const candidateFilterReportSchema = z.object({
     city: z.string().optional(),
     course: z.string().optional(),
     batch: z.string().optional(),
+    minExperience: z.string().optional(),
+    maxExperience: z.string().optional(),
+    minTechnicalRating: z.string().optional(),
+    minCommunicationRating: z.string().optional(),
+    page: z.string().optional(),
+    limit: z.string().optional(),
   }),
 });
 

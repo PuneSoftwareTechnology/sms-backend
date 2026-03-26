@@ -261,3 +261,31 @@ DROP TRIGGER IF EXISTS trg_recruiter_profiles_updated_at ON recruiter_profiles;
 CREATE TRIGGER trg_recruiter_profiles_updated_at BEFORE UPDATE ON recruiter_profiles FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS contacted_date DATE;
+ALTER TABLE recruiter_download_logs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+CREATE TABLE IF NOT EXISTS evaluations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  enrollment_id UUID NOT NULL REFERENCES enrollments(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES users(id),
+  technical_score NUMERIC(4,1) DEFAULT 0,
+  communication_score NUMERIC(4,1) DEFAULT 0,
+  scope_for_improvement TEXT,
+  trainer_remark TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS candidate_comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id UUID NOT NULL REFERENCES users(id),
+  comment TEXT NOT NULL,
+  added_by UUID REFERENCES users(id),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_evaluations_student ON evaluations(student_id);
+CREATE INDEX IF NOT EXISTS idx_evaluations_enrollment ON evaluations(enrollment_id);
+CREATE INDEX IF NOT EXISTS idx_candidate_comments_student ON candidate_comments(student_id);
+
+DROP TRIGGER IF EXISTS trg_evaluations_updated_at ON evaluations;
+CREATE TRIGGER trg_evaluations_updated_at BEFORE UPDATE ON evaluations FOR EACH ROW EXECUTE FUNCTION set_updated_at();

@@ -1,12 +1,26 @@
 import reportRepository from '../repositories/report.repository.js';
 import enrollmentRepository from '../repositories/enrollment.repository.js';
+import recruiterRepository from '../repositories/recruiter.repository.js';
 
 async function candidateFilter(filters) {
-  const [items, courses] = await Promise.all([
+  const [items, courses, cities] = await Promise.all([
     reportRepository.candidateFilterReport(filters),
     enrollmentRepository.getDistinctCourses(),
+    recruiterRepository.getDistinctCities(),
   ]);
-  return { items, courses };
+  return { items, courses, cities };
+}
+
+async function addBulkComment(studentIds, comment, addedBy) {
+  await reportRepository.addBulkComment(studentIds, comment, addedBy);
+}
+
+async function getCvsForDownload(studentIds) {
+  return reportRepository.getCvsByStudentIds(studentIds);
+}
+
+async function getStudentEmails(studentIds) {
+  return reportRepository.getStudentEmails(studentIds);
 }
 
 async function feeDue() {
@@ -43,6 +57,6 @@ async function updatePlacementContact(enrollmentId, data) {
   return reportRepository.updatePlacementContact(enrollmentId, data);
 }
 
-export { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact };
+export { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact, addBulkComment, getCvsForDownload, getStudentEmails };
 
-export default { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact };
+export default { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact, addBulkComment, getCvsForDownload, getStudentEmails };

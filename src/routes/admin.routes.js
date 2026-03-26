@@ -10,6 +10,7 @@ import studentController from "../controllers/student.controller.js";
 import recruiterController from "../controllers/recruiter.controller.js";
 import enquiryController from "../controllers/enquiry.controller.js";
 import reportController from "../controllers/report.controller.js";
+import dashboardController from "../controllers/dashboard.controller.js";
 import qrController from "../controllers/qr.controller.js";
 import { updateBatchEndDateSchema, updateEnrollmentSchema } from "../validators/enrollment.validator.js";
 import { createPaymentSchema } from "../validators/payment.validator.js";
@@ -28,6 +29,7 @@ import {
   candidateFilterReportSchema,
   feeDueSchema,
 } from "../validators/report.validator.js";
+import { dashboardStatsSchema } from "../validators/dashboard.validator.js";
 import {
   uuidIdParamSchema,
   userIdParamSchema,
@@ -37,6 +39,12 @@ import {
 const router = express.Router();
 
 router.use(authMiddleware, authorizeRoles("ADMIN", "SUPER_ADMIN"));
+
+router.get(
+  "/dashboard/stats",
+  validate(dashboardStatsSchema),
+  asyncHandler(dashboardController.getStats),
+);
 
 router.get("/enrollments", asyncHandler(enrollmentController.listEnrollments));
 router.post(
@@ -137,9 +145,21 @@ router.delete(
 );
 
 router.get(
-  "/reports/candidate-filter",
+  "/reports/candidates",
   validate(candidateFilterReportSchema),
   asyncHandler(reportController.candidateFilter),
+);
+router.post(
+  "/reports/candidates/download-cvs",
+  asyncHandler(reportController.downloadBulkCvs),
+);
+router.post(
+  "/reports/candidates/send-email",
+  asyncHandler(reportController.sendBulkEmail),
+);
+router.post(
+  "/reports/candidates/add-comment",
+  asyncHandler(reportController.addBulkComment),
 );
 router.get(
   "/reports/fee-dues",

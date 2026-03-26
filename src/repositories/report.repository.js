@@ -2,13 +2,13 @@ import pool from '../config/db.js';
 
 async function candidateFilterReport(filters = {}, client = pool) {
   const values = [];
-  const conditions = ["u.role = 'STUDENT'"];
+  const conditions = ["u.role = 'STUDENT'", "e.deleted = FALSE"];
 
-  if (filters.city) {
+  if (filters.city && filters.city !== 'ALL') {
     values.push(filters.city);
     conditions.push(`sp.city = $${values.length}`);
   }
-  if (filters.course) {
+  if (filters.course && filters.course !== 'ALL') {
     values.push(filters.course);
     conditions.push(`e.course = $${values.length}`);
   }
@@ -16,20 +16,85 @@ async function candidateFilterReport(filters = {}, client = pool) {
     values.push(filters.batch);
     conditions.push(`e.batch = $${values.length}`);
   }
+  if (filters.minExperience) {
+    values.push(Number(filters.minExperience));
+    conditions.push(`COALESCE(sp.it_exp_years, 0) >= $${values.length}`);
+  }
+  if (filters.maxExperience) {
+    values.push(Number(filters.maxExperience));
+    conditions.push(`COALESCE(sp.it_exp_years, 0) <= $${values.length}`);
+  }
+  if (filters.minTechnicalRating) {
+    values.push(Number(filters.minTechnicalRating));
+    conditions.push(`COALESCE(ev.technical_score, 0) >= $${values.length}`);
+  }
+  if (filters.minCommunicationRating) {
+    values.push(Number(filters.minCommunicationRating));
+    conditions.push(`COALESCE(ev.communication_score, 0) >= $${values.length}`);
+  }
 
   const { rows } = await client.query(
     `
-      SELECT u.id, u.name, u.email, sp.city, e.course, e.batch, cv.file_url
+      SELECT
+        u.id,
+        u.name,
+        e.course,
+        sp.city,
+        COALESCE(sp.it_exp_years, 0)::int           AS "itExperienceYears",
+        COALESCE(ev.technical_score, 0)::numeric     AS "technicalScore",
+        COALESCE(ev.communication_score, 0)::numeric AS "communicationScore",
+        ev.trainer_remark                            AS "remarks",
+        cv.file_url                                  AS "cvUrl"
       FROM users u
       JOIN student_profiles sp ON u.id = sp.user_id
-      JOIN enrollments e ON u.id = e.student_id
+      JOIN enrollments e ON u.id = e.student_id AND e.deleted = FALSE
+      LEFT JOIN evaluations ev ON ev.enrollment_id = e.id
       LEFT JOIN cvs cv ON u.id = cv.student_id
       WHERE ${conditions.join(' AND ')}
-      ORDER BY u.created_at DESC
+      ORDER BY u.name ASC
     `,
     values,
   );
 
+  return rows;
+}
+
+async function addBulkComment(studentIds, comment, addedBy, client = pool) {
+  const values = studentIds.flatMap((id) => [id, comment, addedBy]);
+  const placeholders = studentIds.map((_, i) => {
+    const base = i * 3;
+    return `($${base + 1}, $${base + 2}, $${base + 3})`;
+  }).join(', ');
+
+  await client.query(
+    `INSERT INTO candidate_comments (student_id, comment, added_by) VALUES ${placeholders}`,
+    values,
+  );
+}
+
+async function getCvsByStudentIds(studentIds, client = pool) {
+  if (!studentIds.length) return [];
+  const placeholders = studentIds.map((_, i) => `$${i + 1}`).join(', ');
+  const { rows } = await client.query(
+    `
+      SELECT cv.student_id AS "studentId", cv.file_url AS "fileUrl", u.name, e.course
+      FROM cvs cv
+      JOIN users u ON cv.student_id = u.id
+      LEFT JOIN enrollments e ON cv.student_id = e.student_id AND e.deleted = FALSE
+      WHERE cv.student_id IN (${placeholders})
+    `,
+    studentIds,
+  );
+  return rows;
+}
+
+async function getStudentEmails(studentIds, client = pool) {
+  if (!studentIds.length) return [];
+  const placeholders = studentIds.map((_, i) => `$${i + 1}`).join(', ');
+  const { rows } = await client.query(
+    `SELECT id, name, email FROM users WHERE id IN (${placeholders})`,
+    studentIds,
+  );
   return rows;
 }
 
@@ -192,6 +257,6 @@ async function updatePlacementContact(enrollmentId, data, client = pool) {
   return rows[0];
 }
 
-export { candidateFilterReport, feeDueReport, enrollmentFigures, placementNotContacted, placementContacted, updatePlacementContact };
+export { candidateFilterReport, feeDueReport, enrollmentFigures, placementNotContacted, placementContacted, updatePlacementContact, addBulkComment, getCvsByStudentIds, getStudentEmails };
 
-export default { candidateFilterReport, feeDueReport, enrollmentFigures, placementNotContacted, placementContacted, updatePlacementContact };
+export default { candidateFilterReport, feeDueReport, enrollmentFigures, placementNotContacted, placementContacted, updatePlacementContact, addBulkComment, getCvsByStudentIds, getStudentEmails };
