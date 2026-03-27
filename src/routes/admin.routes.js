@@ -16,6 +16,7 @@ import { updateBatchEndDateSchema, updateEnrollmentSchema } from "../validators/
 import { createPaymentSchema } from "../validators/payment.validator.js";
 import {
   createTestSchema,
+  updateTestSchema,
   createQuestionSchema,
   updateQuestionSchema,
 } from "../validators/test.validator.js";
@@ -78,10 +79,37 @@ router.post(
   asyncHandler(paymentController.createPayment),
 );
 
+// ─── Test Management ─────────────────────────────────────────
+router.get("/tests", asyncHandler(testController.getAllTests));
 router.post(
   "/tests",
   validate(createTestSchema),
   asyncHandler(testController.createTest),
+);
+router.get(
+  "/tests/:id",
+  validate(uuidIdParamSchema),
+  asyncHandler(testController.getTestByIdForAdmin),
+);
+router.put(
+  "/tests/:id",
+  validate(updateTestSchema),
+  asyncHandler(testController.updateTest),
+);
+router.post(
+  "/tests/:id/toggle-active",
+  validate(uuidIdParamSchema),
+  asyncHandler(testController.togglePublish),
+);
+router.delete(
+  "/tests/:id",
+  validate(uuidIdParamSchema),
+  asyncHandler(testController.deleteTest),
+);
+router.get(
+  "/tests/:id/attempts",
+  validate(uuidIdParamSchema),
+  asyncHandler(testController.getTestAttempts),
 );
 router.post(
   "/tests/:id/questions",

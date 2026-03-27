@@ -1,14 +1,41 @@
 import testService from '../services/test.service.js';
 import { ok } from '../utils/apiResponse.js';
 
+// ─── Admin Handlers ──────────────────────────────────────────
+
 async function createTest(req, res) {
   const test = await testService.createTest(req.validated.body);
   return ok(res, test, 'Test created', 201);
 }
 
-async function getActiveTests(req, res) {
-  const tests = await testService.getActiveTests();
-  return ok(res, tests, 'Active tests fetched');
+async function getAllTests(req, res) {
+  const tests = await testService.getAllTests();
+  return ok(res, tests, 'All tests fetched');
+}
+
+async function getTestByIdForAdmin(req, res) {
+  const test = await testService.getTestByIdForAdmin(req.params.id);
+  return ok(res, test, 'Test fetched');
+}
+
+async function updateTest(req, res) {
+  const test = await testService.updateTest(req.params.id, req.validated.body);
+  return ok(res, test, 'Test updated');
+}
+
+async function togglePublish(req, res) {
+  const test = await testService.togglePublish(req.params.id);
+  return ok(res, test, 'Test publish status toggled');
+}
+
+async function deleteTest(req, res) {
+  const result = await testService.deleteTest(req.params.id);
+  return ok(res, result, 'Test deleted');
+}
+
+async function getTestAttempts(req, res) {
+  const attempts = await testService.getTestAttempts(req.params.id);
+  return ok(res, attempts, 'Test attempts fetched');
 }
 
 async function addQuestion(req, res) {
@@ -26,11 +53,57 @@ async function deleteQuestion(req, res) {
   return ok(res, result, 'Question deleted');
 }
 
-async function submitTest(req, res) {
-  const attempt = await testService.submitTest({ ...req.validated.body, studentId: req.user.id });
-  return ok(res, attempt, 'Test submitted', 201);
+// ─── Student Handlers ────────────────────────────────────────
+
+async function getAvailableTests(req, res) {
+  const tests = await testService.getAvailableTests(req.user.id);
+  return ok(res, tests, 'Available tests fetched');
 }
 
-export { createTest, getActiveTests, addQuestion, updateQuestion, deleteQuestion, submitTest };
+async function startTest(req, res) {
+  const result = await testService.startTest(req.user.id, req.params.testId);
+  return ok(res, result, 'Test started', 201);
+}
 
-export default { createTest, getActiveTests, addQuestion, updateQuestion, deleteQuestion, submitTest };
+async function submitTest(req, res) {
+  const result = await testService.submitTest(
+    req.validated.body.attemptId,
+    req.user.id,
+    req.validated.body.answers,
+  );
+  return ok(res, result, 'Test submitted', 201);
+}
+
+// ─── Exports ─────────────────────────────────────────────────
+
+export {
+  createTest,
+  getAllTests,
+  getTestByIdForAdmin,
+  updateTest,
+  togglePublish,
+  deleteTest,
+  getTestAttempts,
+  addQuestion,
+  updateQuestion,
+  deleteQuestion,
+  getAvailableTests,
+  startTest,
+  submitTest,
+};
+
+export default {
+  createTest,
+  getAllTests,
+  getTestByIdForAdmin,
+  updateTest,
+  togglePublish,
+  deleteTest,
+  getTestAttempts,
+  addQuestion,
+  updateQuestion,
+  deleteQuestion,
+  getAvailableTests,
+  startTest,
+  submitTest,
+};

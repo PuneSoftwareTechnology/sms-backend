@@ -152,19 +152,35 @@ CREATE TABLE IF NOT EXISTS qr_codes (
 CREATE TABLE IF NOT EXISTS tests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
+  description TEXT,
+  course TEXT,
   duration_minutes INT NOT NULL DEFAULT 60,
   started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  end_time TIMESTAMP,
+  total_marks INT NOT NULL DEFAULT 0,
   is_active BOOLEAN NOT NULL DEFAULT true,
+  is_published BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE tests ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE tests ADD COLUMN IF NOT EXISTS course TEXT;
+ALTER TABLE tests ADD COLUMN IF NOT EXISTS end_time TIMESTAMP;
+ALTER TABLE tests ADD COLUMN IF NOT EXISTS total_marks INT NOT NULL DEFAULT 0;
+ALTER TABLE tests ADD COLUMN IF NOT EXISTS is_published BOOLEAN NOT NULL DEFAULT false;
 
 CREATE TABLE IF NOT EXISTS questions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   test_id UUID NOT NULL REFERENCES tests(id) ON DELETE CASCADE,
   question TEXT NOT NULL,
+  options TEXT[] NOT NULL DEFAULT '{}',
   correct_answer TEXT NOT NULL,
+  marks INT NOT NULL DEFAULT 1,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS options TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS marks INT NOT NULL DEFAULT 1;
 
 CREATE TABLE IF NOT EXISTS test_attempts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -175,6 +191,29 @@ CREATE TABLE IF NOT EXISTS test_attempts (
   submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT uq_test_attempt_once UNIQUE (test_id, student_id)
+);
+
+CREATE TABLE IF NOT EXISTS attempts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  test_id UUID NOT NULL REFERENCES tests(id) ON DELETE CASCADE,
+  start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  submitted_at TIMESTAMP,
+  expiry_time TIMESTAMP NOT NULL,
+  score INT DEFAULT 0,
+  total_marks INT DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'submitted', 'expired')),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT uq_attempt_once UNIQUE (user_id, test_id)
+);
+
+CREATE TABLE IF NOT EXISTS answers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  attempt_id UUID NOT NULL REFERENCES attempts(id) ON DELETE CASCADE,
+  question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  selected_option INT,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT uq_answer_per_question UNIQUE (attempt_id, question_id)
 );
 
 CREATE TABLE IF NOT EXISTS cvs (
@@ -233,6 +272,9 @@ CREATE INDEX IF NOT EXISTS idx_enrollments_batch ON enrollments(batch);
 CREATE INDEX IF NOT EXISTS idx_payments_enrollment ON payments(enrollment_id);
 CREATE INDEX IF NOT EXISTS idx_recruiter_download_logs_recruiter ON recruiter_download_logs(recruiter_id);
 CREATE INDEX IF NOT EXISTS idx_test_attempts_student ON test_attempts(student_id);
+CREATE INDEX IF NOT EXISTS idx_attempts_user ON attempts(user_id);
+CREATE INDEX IF NOT EXISTS idx_attempts_test ON attempts(test_id);
+CREATE INDEX IF NOT EXISTS idx_answers_attempt ON answers(attempt_id);
 
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
