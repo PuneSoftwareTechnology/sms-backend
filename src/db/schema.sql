@@ -174,7 +174,7 @@ CREATE TABLE IF NOT EXISTS questions (
   test_id UUID NOT NULL REFERENCES tests(id) ON DELETE CASCADE,
   question TEXT NOT NULL,
   options TEXT[] NOT NULL DEFAULT '{}',
-  correct_answer TEXT NOT NULL,
+  correct_option TEXT NOT NULL,
   marks INT NOT NULL DEFAULT 1,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

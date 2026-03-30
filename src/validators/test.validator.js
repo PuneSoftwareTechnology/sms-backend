@@ -31,6 +31,17 @@ const updateTestSchema = z.object({
     durationMinutes: z.number().int().positive().optional(),
     endTime: z.string().optional(),
     isPublished: z.boolean().optional(),
+    questions: z
+      .array(
+        z.object({
+          question: z.string().min(2),
+          options: z.array(z.string().min(1)).length(4),
+          correctOptionIndex: z.number().int().min(0).max(3),
+          marks: z.number().int().positive().optional(),
+        }),
+      )
+      .min(1)
+      .optional(),
   }),
   params: z.object({ id: z.string().uuid() }),
   query: z.object({}).optional(),

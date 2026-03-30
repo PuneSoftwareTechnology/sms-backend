@@ -1,5 +1,6 @@
 import ApiError from '../utils/apiError.js';
 import testRepository from '../repositories/test.repository.js';
+import enrollmentRepository from '../repositories/enrollment.repository.js';
 
 const GRACE_PERIOD_MS = 30 * 1000; // 30 seconds grace period for network latency
 
@@ -44,7 +45,31 @@ async function getTestByIdForAdmin(testId) {
 async function updateTest(testId, payload) {
   const test = await testRepository.findById(testId);
   if (!test) throw new ApiError(404, 'Test not found');
-  return testRepository.updateTest(testId, payload);
+
+  // Extract questions from payload so they don't go to updateTest
+  const { questions, ...testFields } = payload;
+
+  // Update test metadata
+  if (Object.keys(testFields).length > 0) {
+    await testRepository.updateTest(testId, testFields);
+  }
+
+  // Replace questions if provided
+  if (questions && questions.length > 0) {
+    await testRepository.deleteQuestionsByTestId(testId);
+    for (const q of questions) {
+      const correctAnswer = q.options[q.correctOptionIndex];
+      await testRepository.addQuestion(testId, {
+        question: q.question,
+        options: q.options,
+        correctAnswer,
+        marks: q.marks ?? 1,
+      });
+    }
+    await testRepository.recalcTotalMarks(testId);
+  }
+
+  return testRepository.findTestByIdForAdmin(testId);
 }
 
 async function addQuestion(testId, payload) {
@@ -97,7 +122,12 @@ async function getTestAttempts(testId) {
 // ─── Student Functions ───────────────────────────────────────
 
 async function getAvailableTests(studentId) {
-  const tests = await testRepository.findPublishedTests();
+  // Get student's enrolled course
+  const enrollment = await enrollmentRepository.findByStudentId(studentId);
+  if (!enrollment) return [];
+
+  // Only fetch tests matching the student's course
+  const tests = await testRepository.findPublishedTestsByCourse(enrollment.course);
   const available = [];
   for (const test of tests) {
     const attempt = await testRepository.findAttemptByUserAndTest(studentId, test.id);
@@ -117,6 +147,12 @@ async function startTest(studentId, testId) {
   const test = await testRepository.findById(testId);
   if (!test) throw new ApiError(404, 'Test not found');
   if (!test.isPublished) throw new ApiError(400, 'Test is not published');
+
+  // Verify student is enrolled in the test's course
+  const enrollment = await enrollmentRepository.findByStudentId(studentId);
+  if (!enrollment || enrollment.course !== test.course) {
+    throw new ApiError(403, 'This test is not available for your course');
+  }
 
   // Check time window
   const now = new Date();

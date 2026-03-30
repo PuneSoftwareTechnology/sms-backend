@@ -223,6 +223,68 @@ async function listAllRecruiters(client = pool) {
   return rows;
 }
 
+async function updateRecruiter(id, payload, client = pool) {
+  const needsTransaction = client === pool;
+  const dbClient = needsTransaction ? await pool.connect() : client;
+
+  try {
+    if (needsTransaction) await dbClient.query("BEGIN");
+
+    // Update user fields (name, email, phone)
+    const userUpdates = [];
+    const userValues = [];
+    if (payload.name !== undefined) {
+      userValues.push(payload.name);
+      userUpdates.push(`name = $${userValues.length}`);
+    }
+    if (payload.email !== undefined) {
+      userValues.push(payload.email);
+      userUpdates.push(`email = $${userValues.length}`);
+    }
+    if (payload.phone !== undefined) {
+      userValues.push(payload.phone);
+      userUpdates.push(`phone = $${userValues.length}`);
+    }
+    if (userUpdates.length > 0) {
+      userUpdates.push("updated_at = NOW()");
+      userValues.push(id);
+      await dbClient.query(
+        `UPDATE users SET ${userUpdates.join(", ")} WHERE id = $${userValues.length} AND role = 'RECRUITER'`,
+        userValues,
+      );
+    }
+
+    // Update recruiter profile fields (company_name, designation)
+    const profileUpdates = [];
+    const profileValues = [];
+    if (payload.companyName !== undefined) {
+      profileValues.push(payload.companyName);
+      profileUpdates.push(`company_name = $${profileValues.length}`);
+    }
+    if (payload.designation !== undefined) {
+      profileValues.push(payload.designation);
+      profileUpdates.push(`designation = $${profileValues.length}`);
+    }
+    if (profileUpdates.length > 0) {
+      profileValues.push(id);
+      await dbClient.query(
+        `UPDATE recruiter_profiles SET ${profileUpdates.join(", ")} WHERE user_id = $${profileValues.length}`,
+        profileValues,
+      );
+    }
+
+    if (needsTransaction) await dbClient.query("COMMIT");
+
+    // Return updated recruiter
+    return await findById(id, needsTransaction ? pool : client);
+  } catch (error) {
+    if (needsTransaction) await dbClient.query("ROLLBACK");
+    throw error;
+  } finally {
+    if (needsTransaction) dbClient.release();
+  }
+}
+
 async function deleteRecruiter(id, client = pool) {
   const { rows } = await client.query(
     "DELETE FROM users WHERE id = $1 AND role = 'RECRUITER' RETURNING id",
@@ -244,6 +306,7 @@ export {
   getDistinctCities,
   getDistinctExperienceYears,
   createRecruiter,
+  updateRecruiter,
   findById,
   listAllRecruiters,
   deleteRecruiter,
@@ -262,6 +325,7 @@ export default {
   getDistinctCities,
   getDistinctExperienceYears,
   createRecruiter,
+  updateRecruiter,
   findById,
   listAllRecruiters,
   deleteRecruiter,

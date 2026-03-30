@@ -66,12 +66,25 @@ const bulkRemoveShortlistSchema = z.object({
   query: z.object({}).optional(),
 });
 
+const updateRecruiterSchema = z.object({
+  body: z.object({
+    name: z.string().min(2).optional(),
+    phone: z.string().min(10).optional(),
+    email: z.string().email().optional(),
+    companyName: z.string().optional(),
+    designation: z.string().optional(),
+  }),
+  params: z.object({ id: z.string().uuid() }),
+  query: z.object({}).optional(),
+});
+
 export {
   studentIdParamSchema,
   shortlistParamSchema,
   shortlistSchema,
   downloadSchema,
   createRecruiterSchema,
+  updateRecruiterSchema,
   candidateFilterQuerySchema,
   bulkShortlistSchema,
   bulkRemoveShortlistSchema,
@@ -82,6 +95,7 @@ export default {
   shortlistSchema,
   downloadSchema,
   createRecruiterSchema,
+  updateRecruiterSchema,
   candidateFilterQuerySchema,
   bulkShortlistSchema,
   bulkRemoveShortlistSchema,

@@ -191,8 +191,8 @@ async function getMyFullProfile(studentId) {
 
   const enrollment = await enrollmentRepository.findByStudentId(studentId);
 
-  // Fetch payment data, QR code, and CV in parallel
-  const [qrResult, payments, cv] = await Promise.all([
+  // Fetch payment data, QR code, CV, and evaluations in parallel
+  const [qrResult, payments, cv, evaluations] = await Promise.all([
     pool.query(
       "SELECT image_url, bank_name FROM qr_codes WHERE is_active = true LIMIT 1",
     ),
@@ -200,6 +200,7 @@ async function getMyFullProfile(studentId) {
       ? paymentRepository.findByEnrollmentId(enrollment.id)
       : Promise.resolve([]),
     studentRepository.findCvByStudentId(studentId),
+    studentRepository.findEvaluationsByStudentId(studentId),
   ]);
 
   const activeQr = qrResult.rows[0] || null;
@@ -257,7 +258,7 @@ async function getMyFullProfile(studentId) {
   return {
     ...profile,
     payments: paymentSummary,
-    evaluations: [],
+    evaluations,
     cvTemplates: [],
     cv: cv ? { url: cv.file_url } : null,
   };

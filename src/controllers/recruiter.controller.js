@@ -82,6 +82,11 @@ async function createRecruiter(req, res) {
   return ok(res, recruiter, "Recruiter created", 201);
 }
 
+async function updateRecruiter(req, res) {
+  const result = await recruiterService.updateRecruiter(req.params.id, req.validated.body);
+  return ok(res, result, "Recruiter updated");
+}
+
 async function deleteRecruiter(req, res) {
   const result = await recruiterService.deleteRecruiter(req.params.id);
   return ok(res, result, "Recruiter deleted");
@@ -105,6 +110,7 @@ export {
   getShortlist,
   getAdminShortlist,
   createRecruiter,
+  updateRecruiter,
   deleteRecruiter,
   getAllRecruiters,
 };
@@ -122,6 +128,7 @@ export default {
   getShortlist,
   getAdminShortlist,
   createRecruiter,
+  updateRecruiter,
   deleteRecruiter,
   getAllRecruiters,
 };

@@ -124,6 +124,32 @@ async function createRecruiter(payload) {
   });
 }
 
+async function updateRecruiter(id, payload) {
+  const existing = await recruiterRepository.findById(id);
+  if (!existing) {
+    throw new ApiError(404, "Recruiter not found");
+  }
+
+  if (payload.email && payload.email !== existing.email) {
+    const existingByEmail = await userRepository.findByEmail(payload.email);
+    if (existingByEmail) {
+      throw new ApiError(400, "User with this email already exists");
+    }
+  }
+
+  if (payload.phone && payload.phone !== existing.phone) {
+    const { rows } = await pool.query(
+      "SELECT id FROM users WHERE phone = $1 AND id != $2",
+      [payload.phone, id],
+    );
+    if (rows.length > 0) {
+      throw new ApiError(400, "User with this phone already exists");
+    }
+  }
+
+  return recruiterRepository.updateRecruiter(id, payload);
+}
+
 async function deleteRecruiter(id) {
   const deleted = await recruiterRepository.deleteRecruiter(id);
   if (!deleted) {
@@ -147,6 +173,7 @@ export {
   getRecruiterShortlist,
   getAdminRecruiterShortlist,
   createRecruiter,
+  updateRecruiter,
   deleteRecruiter,
   getAllRecruiters,
 };
@@ -162,6 +189,7 @@ export default {
   getRecruiterShortlist,
   getAdminRecruiterShortlist,
   createRecruiter,
+  updateRecruiter,
   deleteRecruiter,
   getAllRecruiters,
 };

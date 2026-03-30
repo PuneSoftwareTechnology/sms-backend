@@ -119,6 +119,28 @@ async function upsertCv(studentId, fileUrl, client = pool) {
   return rows[0];
 }
 
+async function findEvaluationsByStudentId(studentId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       ev.id,
+       ev.enrollment_id    AS "enrollmentId",
+       ev.technical_score   AS "technicalScore",
+       ev.communication_score AS "communicationScore",
+       ev.scope_for_improvement AS "scopeForImprovement",
+       ev.trainer_remark    AS "trainerRemark",
+       ev.created_at        AS "createdAt",
+       ev.updated_at        AS "updatedAt",
+       e.course             AS "courseName",
+       e.batch
+     FROM evaluations ev
+     JOIN enrollments e ON ev.enrollment_id = e.id
+     WHERE ev.student_id = $1 AND e.deleted = FALSE
+     ORDER BY ev.created_at DESC`,
+    [studentId],
+  );
+  return rows;
+}
+
 export {
   createEmptyProfile,
   updateProfile,
@@ -127,6 +149,7 @@ export {
   createProjectSubmission,
   findCvByStudentId,
   upsertCv,
+  findEvaluationsByStudentId,
 };
 
 export default {
@@ -137,4 +160,5 @@ export default {
   createProjectSubmission,
   findCvByStudentId,
   upsertCv,
+  findEvaluationsByStudentId,
 };

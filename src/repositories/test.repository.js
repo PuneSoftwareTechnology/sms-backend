@@ -77,6 +77,25 @@ async function findPublishedTests(client = pool) {
   return rows;
 }
 
+async function findPublishedTestsByCourse(course, client = pool) {
+  const { rows } = await client.query(
+    `SELECT t.id, t.title, t.description, t.course,
+            t.duration_minutes AS "durationMinutes",
+            t.end_time AS "endTime",
+            t.total_marks AS "totalMarks",
+            t.is_published AS "isPublished",
+            t.created_at AS "createdAt",
+            COUNT(q.id)::int AS "questionCount"
+     FROM tests t
+     LEFT JOIN questions q ON q.test_id = t.id
+     WHERE t.is_published = true AND t.course = $1
+     GROUP BY t.id
+     ORDER BY t.created_at DESC`,
+    [course],
+  );
+  return rows;
+}
+
 async function findTestByIdForAdmin(testId, client = pool) {
   const test = await findById(testId, client);
   if (!test) return null;
@@ -215,6 +234,10 @@ async function deleteQuestion(id, client = pool) {
     [id],
   );
   return rows[0] || null;
+}
+
+async function deleteQuestionsByTestId(testId, client = pool) {
+  await client.query('DELETE FROM questions WHERE test_id = $1', [testId]);
 }
 
 async function findQuestionsByTestId(testId, client = pool) {
@@ -378,6 +401,7 @@ export {
   findById,
   findAllTests,
   findPublishedTests,
+  findPublishedTestsByCourse,
   findTestByIdForAdmin,
   findTestByIdForStudent,
   updateTest,
@@ -387,6 +411,7 @@ export {
   addQuestion,
   updateQuestion,
   deleteQuestion,
+  deleteQuestionsByTestId,
   findQuestionsByTestId,
   findQuestionTestId,
   createAttempt,
@@ -406,6 +431,7 @@ export default {
   findById,
   findAllTests,
   findPublishedTests,
+  findPublishedTestsByCourse,
   findTestByIdForAdmin,
   findTestByIdForStudent,
   updateTest,
@@ -415,6 +441,7 @@ export default {
   addQuestion,
   updateQuestion,
   deleteQuestion,
+  deleteQuestionsByTestId,
   findQuestionsByTestId,
   findQuestionTestId,
   createAttempt,

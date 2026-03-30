@@ -20,7 +20,7 @@ import {
   createQuestionSchema,
   updateQuestionSchema,
 } from "../validators/test.validator.js";
-import { createRecruiterSchema } from "../validators/recruiter.validator.js";
+import { createRecruiterSchema, updateRecruiterSchema } from "../validators/recruiter.validator.js";
 import {
   createEnquirySchema,
   updateEnquirySchema,
@@ -144,6 +144,11 @@ router.post(
   asyncHandler(recruiterController.createRecruiter),
 );
 router.get("/recruiters", asyncHandler(recruiterController.getAllRecruiters));
+router.put(
+  "/recruiters/:id",
+  validate(updateRecruiterSchema),
+  asyncHandler(recruiterController.updateRecruiter),
+);
 router.delete(
   "/recruiters/:id",
   validate(uuidIdParamSchema),
