@@ -35,6 +35,7 @@ import {
   uuidIdParamSchema,
   userIdParamSchema,
   enrollmentIdParamSchema,
+  evaluationIdParamSchema,
 } from "../validators/common.validator.js";
 
 const router = express.Router();
@@ -136,6 +137,12 @@ router.patch(
   "/students/:id/approve",
   validate(uuidIdParamSchema),
   asyncHandler(studentController.approveStudent),
+);
+
+router.put(
+  "/evaluations/:evaluationId",
+  validate(evaluationIdParamSchema),
+  asyncHandler(studentController.updateCommunicationScore),
 );
 
 router.post(

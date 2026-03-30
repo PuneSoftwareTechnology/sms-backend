@@ -357,16 +357,13 @@ async function findAttemptsByTestId(testId, client = pool) {
   return rows;
 }
 
-// ─── Evaluation Update ──────────────────────────────────────
+// ─── Evaluation Helpers ─────────────────────────────────────
 
-async function updateEvaluationTechnicalScore(studentId, score, client = pool) {
-  // Try updating existing evaluation
+async function ensureEvaluationExists(studentId, client = pool) {
   const { rowCount } = await client.query(
-    `UPDATE evaluations SET technical_score = $1
-     WHERE student_id = $2`,
-    [score, studentId],
+    'SELECT 1 FROM evaluations WHERE student_id = $1 LIMIT 1',
+    [studentId],
   );
-
   if (rowCount > 0) return;
 
   // No evaluation exists — find enrollment and create one
@@ -379,8 +376,8 @@ async function updateEvaluationTechnicalScore(studentId, score, client = pool) {
 
   await client.query(
     `INSERT INTO evaluations (enrollment_id, student_id, technical_score)
-     VALUES ($1, $2, $3)`,
-    [enrollments[0].id, studentId, score],
+     VALUES ($1, $2, 0)`,
+    [enrollments[0].id, studentId],
   );
 }
 
@@ -422,7 +419,7 @@ export {
   saveAnswer,
   findAnswersByAttemptId,
   findAttemptsByTestId,
-  updateEvaluationTechnicalScore,
+  ensureEvaluationExists,
   findAttemptByTestAndStudent,
 };
 
@@ -452,6 +449,6 @@ export default {
   saveAnswer,
   findAnswersByAttemptId,
   findAttemptsByTestId,
-  updateEvaluationTechnicalScore,
+  ensureEvaluationExists,
   findAttemptByTestAndStudent,
 };

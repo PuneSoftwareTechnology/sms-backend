@@ -220,11 +220,8 @@ async function submitTest(attemptId, studentId, answers) {
   // Mark attempt as submitted
   const submittedAttempt = await testRepository.submitAttempt(attemptId, score, totalMarks);
 
-  // Update evaluation technical score (best-effort, may not have evaluation record)
-  if (totalMarks > 0) {
-    const scoreOutOf10 = Math.round((score / totalMarks) * 10 * 10) / 10;
-    await testRepository.updateEvaluationTechnicalScore(studentId, scoreOutOf10);
-  }
+  // Ensure evaluation record exists (technical score is computed from attempts on read)
+  await testRepository.ensureEvaluationExists(studentId);
 
   return {
     ...submittedAttempt,

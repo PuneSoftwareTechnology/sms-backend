@@ -41,6 +41,14 @@ async function uploadCv(req, res) {
   return ok(res, cv, 'CV uploaded', 201);
 }
 
+async function updateCommunicationScore(req, res) {
+  const updated = await studentService.updateCommunicationScore(
+    req.params.evaluationId,
+    req.body.communicationScore,
+  );
+  return ok(res, updated, 'Communication score updated');
+}
+
 async function uploadCertificate(req, res) {
   const result = await studentService.uploadCertificate(req.user.id, req.file);
   return ok(res, result, 'Certificate uploaded', 201);
@@ -56,6 +64,7 @@ export {
   uploadProject,
   uploadCv,
   uploadCertificate,
+  updateCommunicationScore,
 };
 
 export default {
@@ -68,4 +77,5 @@ export default {
   uploadProject,
   uploadCv,
   uploadCertificate,
+  updateCommunicationScore,
 };

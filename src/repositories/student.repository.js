@@ -119,12 +119,32 @@ async function upsertCv(studentId, fileUrl, client = pool) {
   return rows[0];
 }
 
+async function updateCommunicationScore(evaluationId, communicationScore, client = pool) {
+  const { rows } = await client.query(
+    `UPDATE evaluations
+     SET communication_score = $1, updated_at = NOW()
+     WHERE id = $2
+     RETURNING
+       id,
+       enrollment_id    AS "enrollmentId",
+       student_id       AS "studentId",
+       technical_score   AS "technicalScore",
+       communication_score AS "communicationScore",
+       scope_for_improvement AS "scopeForImprovement",
+       trainer_remark    AS "trainerRemark",
+       updated_at        AS "updatedAt"`,
+    [communicationScore, evaluationId],
+  );
+  return rows[0] || null;
+}
+
 async function findEvaluationsByStudentId(studentId, client = pool) {
   const { rows } = await client.query(
     `SELECT
        ev.id,
        ev.enrollment_id    AS "enrollmentId",
-       ev.technical_score   AS "technicalScore",
+       COALESCE(ts.marks_scored, 0)::int AS "technicalMarksScored",
+       COALESCE(ts.total_marks, 0)::int  AS "technicalTotalMarks",
        ev.communication_score AS "communicationScore",
        ev.scope_for_improvement AS "scopeForImprovement",
        ev.trainer_remark    AS "trainerRemark",
@@ -134,6 +154,15 @@ async function findEvaluationsByStudentId(studentId, client = pool) {
        e.batch
      FROM evaluations ev
      JOIN enrollments e ON ev.enrollment_id = e.id
+     LEFT JOIN (
+       SELECT a.user_id, t.course,
+              SUM(a.score)::int       AS marks_scored,
+              SUM(a.total_marks)::int AS total_marks
+       FROM attempts a
+       JOIN tests t ON a.test_id = t.id
+       WHERE a.status IN ('submitted', 'expired')
+       GROUP BY a.user_id, t.course
+     ) ts ON ts.user_id = ev.student_id AND ts.course = e.course
      WHERE ev.student_id = $1 AND e.deleted = FALSE
      ORDER BY ev.created_at DESC`,
     [studentId],
@@ -150,6 +179,7 @@ export {
   findCvByStudentId,
   upsertCv,
   findEvaluationsByStudentId,
+  updateCommunicationScore,
 };
 
 export default {
@@ -161,4 +191,5 @@ export default {
   findCvByStudentId,
   upsertCv,
   findEvaluationsByStudentId,
+  updateCommunicationScore,
 };

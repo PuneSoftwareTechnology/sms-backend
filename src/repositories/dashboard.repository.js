@@ -475,12 +475,19 @@ async function getInDemandCourses(filters = {}, client = pool) {
 async function getTechScoreByCourse(client = pool) {
   const { rows } = await client.query(
     `SELECT
-       e.course,
-       ROUND(AVG(ev.technical_score), 1)::numeric AS "avgTechnicalScore"
-     FROM evaluations ev
-     JOIN enrollments e ON ev.enrollment_id = e.id AND e.deleted = FALSE
-     WHERE ev.technical_score > 0
-     GROUP BY e.course`,
+       sub.course,
+       ROUND(AVG(sub.pct), 1)::numeric AS "avgTechnicalScore"
+     FROM (
+       SELECT t.course, a.user_id,
+         CASE WHEN SUM(a.total_marks) > 0
+              THEN (SUM(a.score)::numeric / SUM(a.total_marks)) * 100
+              ELSE 0 END AS pct
+       FROM attempts a
+       JOIN tests t ON a.test_id = t.id
+       WHERE a.status IN ('submitted', 'expired')
+       GROUP BY t.course, a.user_id
+     ) sub
+     GROUP BY sub.course`,
   );
   return rows;
 }

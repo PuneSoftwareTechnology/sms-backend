@@ -264,6 +264,18 @@ async function getMyFullProfile(studentId) {
   };
 }
 
+async function updateCommunicationScore(evaluationId, communicationScore) {
+  if (communicationScore < 0 || communicationScore > 10) {
+    throw new ApiError(400, "Communication score must be between 0 and 10");
+  }
+
+  const updated = await studentRepository.updateCommunicationScore(evaluationId, communicationScore);
+  if (!updated) {
+    throw new ApiError(404, "Evaluation not found");
+  }
+  return updated;
+}
+
 async function uploadCertificate(studentId, file) {
   if (!file) {
     throw new ApiError(400, "Certificate file is required");
@@ -284,6 +296,7 @@ export {
   uploadProject,
   uploadCv,
   uploadCertificate,
+  updateCommunicationScore,
 };
 
 export default {
@@ -296,4 +309,5 @@ export default {
   uploadProject,
   uploadCv,
   uploadCertificate,
+  updateCommunicationScore,
 };

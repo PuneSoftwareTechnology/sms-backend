@@ -26,7 +26,7 @@ async function candidateFilterReport(filters = {}, client = pool) {
   }
   if (filters.minTechnicalRating) {
     values.push(Number(filters.minTechnicalRating));
-    conditions.push(`COALESCE(ev.technical_score, 0) >= $${values.length}`);
+    conditions.push(`CASE WHEN COALESCE(ts.total_marks, 0) > 0 THEN (ts.marks_scored::numeric / ts.total_marks) * 100 ELSE 0 END >= $${values.length}`);
   }
   if (filters.minCommunicationRating) {
     values.push(Number(filters.minCommunicationRating));
@@ -41,7 +41,8 @@ async function candidateFilterReport(filters = {}, client = pool) {
         e.course,
         sp.city,
         COALESCE(sp.it_exp_years, 0)::int           AS "itExperienceYears",
-        COALESCE(ev.technical_score, 0)::numeric     AS "technicalScore",
+        COALESCE(ts.marks_scored, 0)::int            AS "technicalMarksScored",
+        COALESCE(ts.total_marks, 0)::int             AS "technicalTotalMarks",
         COALESCE(ev.communication_score, 0)::numeric AS "communicationScore",
         ev.trainer_remark                            AS "remarks",
         cv.file_url                                  AS "cvUrl"
@@ -50,6 +51,15 @@ async function candidateFilterReport(filters = {}, client = pool) {
       JOIN enrollments e ON u.id = e.student_id AND e.deleted = FALSE
       LEFT JOIN evaluations ev ON ev.enrollment_id = e.id
       LEFT JOIN cvs cv ON u.id = cv.student_id
+      LEFT JOIN (
+        SELECT a.user_id, t.course,
+               SUM(a.score)::int       AS marks_scored,
+               SUM(a.total_marks)::int AS total_marks
+        FROM attempts a
+        JOIN tests t ON a.test_id = t.id
+        WHERE a.status IN ('submitted', 'expired')
+        GROUP BY a.user_id, t.course
+      ) ts ON ts.user_id = u.id AND ts.course = e.course
       WHERE ${conditions.join(' AND ')}
       ORDER BY u.name ASC
     `,

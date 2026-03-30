@@ -24,5 +24,13 @@ const qrIdParamSchema = z.object({
   query: z.object({}).optional(),
 });
 
-export { uuidIdParamSchema, userIdParamSchema, enrollmentIdParamSchema, qrIdParamSchema };
-export default { uuidIdParamSchema, userIdParamSchema, enrollmentIdParamSchema, qrIdParamSchema };
+const evaluationIdParamSchema = z.object({
+  body: z.object({
+    communicationScore: z.number().min(0).max(10),
+  }),
+  params: z.object({ evaluationId: z.string().uuid() }),
+  query: z.object({}).optional(),
+});
+
+export { uuidIdParamSchema, userIdParamSchema, enrollmentIdParamSchema, qrIdParamSchema, evaluationIdParamSchema };
+export default { uuidIdParamSchema, userIdParamSchema, enrollmentIdParamSchema, qrIdParamSchema, evaluationIdParamSchema };
