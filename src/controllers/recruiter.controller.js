@@ -97,6 +97,13 @@ async function getAllRecruiters(req, res) {
   return ok(res, recruiters, "Recruiters fetched");
 }
 
+async function sendEmailToStudent(req, res) {
+  const { studentId } = req.validated.params;
+  const { subject, body } = req.validated.body;
+  const result = await recruiterService.sendEmailToStudent(req.user.id, studentId, subject, body);
+  return ok(res, result, "Email sent successfully");
+}
+
 export {
   filterCandidates,
   downloadCv,
@@ -113,6 +120,7 @@ export {
   updateRecruiter,
   deleteRecruiter,
   getAllRecruiters,
+  sendEmailToStudent,
 };
 
 export default {
@@ -131,4 +139,5 @@ export default {
   updateRecruiter,
   deleteRecruiter,
   getAllRecruiters,
+  sendEmailToStudent,
 };

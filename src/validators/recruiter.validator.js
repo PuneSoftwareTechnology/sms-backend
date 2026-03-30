@@ -66,6 +66,15 @@ const bulkRemoveShortlistSchema = z.object({
   query: z.object({}).optional(),
 });
 
+const sendEmailSchema = z.object({
+  body: z.object({
+    subject: z.string().min(1).max(200),
+    body: z.string().min(1).max(5000),
+  }),
+  params: z.object({ studentId: z.string().uuid() }),
+  query: z.object({}).optional(),
+});
+
 const updateRecruiterSchema = z.object({
   body: z.object({
     name: z.string().min(2).optional(),
@@ -88,6 +97,7 @@ export {
   candidateFilterQuerySchema,
   bulkShortlistSchema,
   bulkRemoveShortlistSchema,
+  sendEmailSchema,
 };
 export default {
   studentIdParamSchema,
@@ -99,4 +109,5 @@ export default {
   candidateFilterQuerySchema,
   bulkShortlistSchema,
   bulkRemoveShortlistSchema,
+  sendEmailSchema,
 };

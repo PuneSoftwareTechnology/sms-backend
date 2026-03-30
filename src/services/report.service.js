@@ -1,6 +1,7 @@
 import reportRepository from '../repositories/report.repository.js';
 import enrollmentRepository from '../repositories/enrollment.repository.js';
 import recruiterRepository from '../repositories/recruiter.repository.js';
+import s3Service from '../utils/s3.service.js';
 
 async function candidateFilter(filters) {
   const [items, courses, cities] = await Promise.all([
@@ -8,7 +9,9 @@ async function candidateFilter(filters) {
     enrollmentRepository.getDistinctCourses(),
     recruiterRepository.getDistinctCities(),
   ]);
-  return { items, courses, cities };
+
+  const resolvedItems = await s3Service.resolvePresignedUrlsInArray(items, ['cvUrl']);
+  return { items: resolvedItems, courses, cities };
 }
 
 async function addBulkComment(studentIds, comment, addedBy) {
@@ -16,7 +19,8 @@ async function addBulkComment(studentIds, comment, addedBy) {
 }
 
 async function getCvsForDownload(studentIds) {
-  return reportRepository.getCvsByStudentIds(studentIds);
+  const cvs = await reportRepository.getCvsByStudentIds(studentIds);
+  return s3Service.resolvePresignedUrlsInArray(cvs, ['fileUrl']);
 }
 
 async function getStudentEmails(studentIds) {

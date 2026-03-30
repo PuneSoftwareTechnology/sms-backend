@@ -1,9 +1,21 @@
-import crypto from 'crypto';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import env from '../config/env.js';
 
-function ensureExpirySeconds(seconds) {
-  return Math.min(Math.max(Number(seconds || 300), 1), 300);
+function createS3Client() {
+  const config = { region: env.awsRegion };
+
+  if (env.awsAccessKeyId && env.awsSecretAccessKey) {
+    config.credentials = {
+      accessKeyId: env.awsAccessKeyId,
+      secretAccessKey: env.awsSecretAccessKey,
+    };
+  }
+
+  return new S3Client(config);
 }
+
+const s3 = createS3Client();
 
 function ensureBucketConfigured() {
   if (!env.s3Bucket) {
@@ -11,27 +23,66 @@ function ensureBucketConfigured() {
   }
 }
 
-async function getSignedDownloadUrl(key, expiresInSeconds = env.s3SignedUrlExpirySeconds || 300) {
-  ensureBucketConfigured();
-  const expiry = ensureExpirySeconds(expiresInSeconds);
-  const expiresAt = Math.floor(Date.now() / 1000) + expiry;
-  const signature = crypto.createHash('sha256').update(`${key}:${expiresAt}:${env.jwtSecret}`).digest('hex');
-
-  return `https://${env.s3Bucket}.s3.${env.awsRegion || 'us-east-1'}.amazonaws.com/${key}?exp=${expiresAt}&sig=${signature}`;
-}
-
 async function uploadBuffer(buffer, key, contentType = 'application/octet-stream') {
   ensureBucketConfigured();
-  void buffer;
-  void contentType;
-  return `https://${env.s3Bucket}.s3.${env.awsRegion || 'us-east-1'}.amazonaws.com/${key}`;
+
+  await s3.send(new PutObjectCommand({
+    Bucket: env.s3Bucket,
+    Key: key,
+    Body: buffer,
+    ContentType: contentType,
+  }));
+
+  return key;
 }
 
-async function deleteObjectByUrl(fileUrl) {
+async function getSignedDownloadUrl(key, expiresInSeconds = env.s3SignedUrlExpirySeconds || 300) {
   ensureBucketConfigured();
-  void fileUrl;
+
+  const expiry = Math.min(Math.max(Number(expiresInSeconds || 300), 1), 3600);
+
+  const command = new GetObjectCommand({
+    Bucket: env.s3Bucket,
+    Key: key,
+  });
+
+  return getSignedUrl(s3, command, { expiresIn: expiry });
 }
 
-export { getSignedDownloadUrl, uploadBuffer, deleteObjectByUrl };
+async function deleteObject(key) {
+  ensureBucketConfigured();
+  if (!key) return;
 
-export default { getSignedDownloadUrl, uploadBuffer, deleteObjectByUrl };
+  await s3.send(new DeleteObjectCommand({
+    Bucket: env.s3Bucket,
+    Key: key,
+  }));
+}
+
+async function resolvePresignedUrl(key) {
+  if (!key) return null;
+  return getSignedDownloadUrl(key);
+}
+
+async function resolvePresignedUrls(obj, fields) {
+  if (!obj) return obj;
+
+  const resolved = { ...obj };
+  await Promise.all(
+    fields.map(async (field) => {
+      if (resolved[field]) {
+        resolved[field] = await resolvePresignedUrl(resolved[field]);
+      }
+    }),
+  );
+  return resolved;
+}
+
+async function resolvePresignedUrlsInArray(items, fields) {
+  if (!items?.length) return items;
+  return Promise.all(items.map((item) => resolvePresignedUrls(item, fields)));
+}
+
+export { uploadBuffer, getSignedDownloadUrl, deleteObject, resolvePresignedUrl, resolvePresignedUrls, resolvePresignedUrlsInArray };
+
+export default { uploadBuffer, getSignedDownloadUrl, deleteObject, resolvePresignedUrl, resolvePresignedUrls, resolvePresignedUrlsInArray };

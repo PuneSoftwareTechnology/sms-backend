@@ -7,6 +7,10 @@ import enrollmentRepository from "../repositories/enrollment.repository.js";
 import paymentRepository from "../repositories/payment.repository.js";
 import s3Service from "../utils/s3.service.js";
 
+async function resolveProfileUrls(profile) {
+  return s3Service.resolvePresignedUrls(profile, ['profilePhoto']);
+}
+
 async function signup(payload) {
   // 1. Check if a user with this email was pre-enrolled by admin
   const existingUser = await userRepository.findByEmail(payload.email);
@@ -96,8 +100,9 @@ async function updateProfile(userId, payload) {
 
     await client.query("COMMIT");
 
-    // Return the full combined profile
-    return studentRepository.findFullProfile(userId);
+    // Return the full combined profile with resolved URLs
+    const fullProfile = await studentRepository.findFullProfile(userId);
+    return resolveProfileUrls(fullProfile);
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
@@ -112,25 +117,22 @@ async function uploadProfilePhoto(studentId, file) {
   }
 
   const oldProfile = await studentRepository.findFullProfile(studentId);
-  const oldPhotoUrl = oldProfile?.profilePhoto;
+  const oldPhotoKey = oldProfile?.profilePhoto;
 
-  const key = `profile-photos/${studentId}/${Date.now()}_${file.originalname}`;
-  const photoUrl = await s3Service.uploadBuffer(
-    file.buffer,
-    key,
-    file.mimetype,
-  );
+  const key = `${studentId}/profile-photo/${Date.now()}_${file.originalname}`;
+  await s3Service.uploadBuffer(file.buffer, key, file.mimetype);
 
-  const updated = await studentRepository.updatePhotoUrl(studentId, photoUrl);
+  const updated = await studentRepository.updatePhotoUrl(studentId, key);
   if (!updated) {
     throw new ApiError(404, "Student profile not found");
   }
 
-  if (oldPhotoUrl) {
-    await s3Service.deleteObjectByUrl(oldPhotoUrl);
+  if (oldPhotoKey) {
+    await s3Service.deleteObject(oldPhotoKey);
   }
 
-  return studentRepository.findFullProfile(studentId);
+  const fullProfile = await studentRepository.findFullProfile(studentId);
+  return resolveProfileUrls(fullProfile);
 }
 
 async function getProfile(userId, currentUser) {
@@ -143,7 +145,7 @@ async function getProfile(userId, currentUser) {
     throw new ApiError(404, "Profile not found");
   }
 
-  return profile;
+  return resolveProfileUrls(profile);
 }
 
 async function approveStudent(studentId) {
@@ -159,9 +161,9 @@ async function uploadProject(studentId, file) {
     throw new ApiError(400, "Project file is required");
   }
 
-  const key = `projects/${studentId}/${Date.now()}_${file.originalname}`;
-  const fileUrl = await s3Service.uploadBuffer(file.buffer, key, file.mimetype);
-  return studentRepository.createProjectSubmission(studentId, fileUrl);
+  const key = `${studentId}/projects/${Date.now()}_${file.originalname}`;
+  await s3Service.uploadBuffer(file.buffer, key, file.mimetype);
+  return studentRepository.createProjectSubmission(studentId, key);
 }
 
 async function uploadCv(studentId, file) {
@@ -171,13 +173,13 @@ async function uploadCv(studentId, file) {
 
   const existingCv = await studentRepository.findCvByStudentId(studentId);
 
-  const key = `cvs/${studentId}.pdf`;
-  const fileUrl = await s3Service.uploadBuffer(file.buffer, key, file.mimetype);
+  const key = `${studentId}/cvs/${Date.now()}_${file.originalname}`;
+  await s3Service.uploadBuffer(file.buffer, key, file.mimetype);
 
-  const cv = await studentRepository.upsertCv(studentId, fileUrl);
+  const cv = await studentRepository.upsertCv(studentId, key);
 
-  if (existingCv && existingCv.file_url && existingCv.file_url !== fileUrl) {
-    await s3Service.deleteObjectByUrl(existingCv.file_url);
+  if (existingCv && existingCv.file_url && existingCv.file_url !== key) {
+    await s3Service.deleteObject(existingCv.file_url);
   }
 
   return cv;
@@ -204,6 +206,12 @@ async function getMyFullProfile(studentId) {
   ]);
 
   const activeQr = qrResult.rows[0] || null;
+
+  // Resolve profile photo presigned URL
+  const resolvedProfile = await resolveProfileUrls(profile);
+
+  // Resolve CV presigned URL
+  const cvUrl = cv?.file_url ? await s3Service.resolvePresignedUrl(cv.file_url) : null;
 
   // Build payment summary
   let paymentSummary = null;
@@ -256,11 +264,11 @@ async function getMyFullProfile(studentId) {
   }
 
   return {
-    ...profile,
+    ...resolvedProfile,
     payments: paymentSummary,
     evaluations,
     cvTemplates: [],
-    cv: cv ? { url: cv.file_url } : null,
+    cv: cv ? { url: cvUrl } : null,
   };
 }
 
@@ -281,9 +289,9 @@ async function uploadCertificate(studentId, file) {
     throw new ApiError(400, "Certificate file is required");
   }
 
-  const key = `certificates/${studentId}/${Date.now()}_${file.originalname}`;
-  const fileUrl = await s3Service.uploadBuffer(file.buffer, key, file.mimetype);
-  return { url: fileUrl };
+  const key = `${studentId}/certificates/${Date.now()}_${file.originalname}`;
+  await s3Service.uploadBuffer(file.buffer, key, file.mimetype);
+  return { url: key };
 }
 
 export {

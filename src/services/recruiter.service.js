@@ -4,6 +4,7 @@ import pool from "../config/db.js";
 import recruiterRepository from "../repositories/recruiter.repository.js";
 import enrollmentRepository from "../repositories/enrollment.repository.js";
 import userRepository from "../repositories/user.repository.js";
+import studentRepository from "../repositories/student.repository.js";
 import emailService from "./email.service.js";
 import s3Service from "../utils/s3.service.js";
 
@@ -16,7 +17,9 @@ async function filterCandidates(filters, recruiterId) {
     recruiterRepository.getDistinctCities(),
     recruiterRepository.getDistinctExperienceYears(),
   ]);
-  return { items, courses, cities, experienceYears };
+
+  const resolvedItems = await s3Service.resolvePresignedUrlsInArray(items, ['cvUrl']);
+  return { items: resolvedItems, courses, cities, experienceYears };
 }
 
 async function downloadCv(recruiterId, studentId) {
@@ -26,12 +29,16 @@ async function downloadCv(recruiterId, studentId) {
     throw new ApiError(403, "Download limit reached");
   }
 
+  const cv = await studentRepository.findCvByStudentId(studentId);
+  if (!cv || !cv.file_url) {
+    throw new ApiError(404, "CV not found for this student");
+  }
+
   await recruiterRepository.insertDownloadLog(recruiterId, studentId);
 
-  const key = `cvs/${studentId}.pdf`;
-  const signedUrl = await s3Service.getSignedDownloadUrl(key, 300);
+  const signedUrl = await s3Service.getSignedDownloadUrl(cv.file_url, 300);
 
-  await emailService.sendCvDownloadNotification({ recruiterId, studentId });
+  emailService.sendCvDownloadNotification({ recruiterId, studentId }).catch(console.error);
 
   return {
     signedUrl,
@@ -162,6 +169,22 @@ async function getAllRecruiters() {
   return recruiterRepository.listAllRecruiters();
 }
 
+async function sendEmailToStudent(recruiterId, studentId, subject, body) {
+  const student = await userRepository.findById(studentId);
+  if (!student || !student.email) {
+    throw new ApiError(404, "Student not found");
+  }
+
+  const { sendBulkCustomEmail } = await import('./email.service.js');
+  await sendBulkCustomEmail({
+    recipients: [{ name: student.name, email: student.email }],
+    subject,
+    body,
+  });
+
+  return { sent: true };
+}
+
 export {
   filterCandidates,
   downloadCv,
@@ -176,6 +199,7 @@ export {
   updateRecruiter,
   deleteRecruiter,
   getAllRecruiters,
+  sendEmailToStudent,
 };
 
 export default {
@@ -192,4 +216,5 @@ export default {
   updateRecruiter,
   deleteRecruiter,
   getAllRecruiters,
+  sendEmailToStudent,
 };

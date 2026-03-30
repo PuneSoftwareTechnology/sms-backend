@@ -1,4 +1,5 @@
 import reportService from '../services/report.service.js';
+import emailService from '../services/email.service.js';
 import { ok } from '../utils/apiResponse.js';
 
 async function candidateFilter(req, res) {
@@ -29,8 +30,8 @@ async function sendBulkEmail(req, res) {
     return res.status(400).json({ success: false, message: 'studentIds, subject, and body are required' });
   }
   const students = await reportService.getStudentEmails(studentIds);
-  // TODO: integrate with SES/email provider when configured
-  return ok(res, { sent: students.length }, 'Emails queued successfully');
+  const results = await emailService.sendBulkCustomEmail({ recipients: students, subject, body });
+  return ok(res, results, `${results.sent} email(s) sent successfully`);
 }
 
 async function addBulkComment(req, res) {
