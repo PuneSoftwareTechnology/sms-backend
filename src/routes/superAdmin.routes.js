@@ -3,6 +3,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import validate from "../middlewares/validate.middleware.js";
 import authMiddleware from "../middlewares/auth.middleware.js";
 import authorizeRoles from "../middlewares/authorize.middleware.js";
+import { imageUpload } from "../middlewares/upload.middleware.js";
 import superAdminController from "../controllers/superAdmin.controller.js";
 import qrController from "../controllers/qr.controller.js";
 import {
@@ -32,6 +33,7 @@ router.delete(
 
 router.post(
   "/qr",
+  imageUpload.single("image"),
   validate(createQrSchema),
   asyncHandler(qrController.createQr),
 );

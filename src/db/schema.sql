@@ -145,6 +145,11 @@ CREATE TABLE IF NOT EXISTS payments (
 CREATE TABLE IF NOT EXISTS qr_codes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   image_url TEXT,
+  bank_name TEXT,
+  branch TEXT,
+  upi_id TEXT,
+  account_number TEXT,
+  ifsc_code TEXT,
   is_active BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

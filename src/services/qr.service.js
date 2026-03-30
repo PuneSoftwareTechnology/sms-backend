@@ -1,13 +1,22 @@
 import pool from '../config/db.js';
 import ApiError from '../utils/apiError.js';
 import qrRepository from '../repositories/qr.repository.js';
+import s3Service from '../utils/s3.service.js';
 
-async function createQr(payload) {
-  return qrRepository.createQr(payload);
+async function createQr(payload, file) {
+  if (!file) {
+    throw new ApiError(400, 'QR code image is required');
+  }
+
+  const key = `qr-codes/${Date.now()}_${file.originalname}`;
+  await s3Service.uploadBuffer(file.buffer, key, file.mimetype);
+
+  return qrRepository.createQr({ ...payload, imageUrl: key });
 }
 
 async function listQr() {
-  return qrRepository.listQr();
+  const qrCodes = await qrRepository.listQr();
+  return s3Service.resolvePresignedUrlsInArray(qrCodes, ['image_url']);
 }
 
 async function deleteQr(id) {

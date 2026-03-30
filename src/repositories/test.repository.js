@@ -122,12 +122,17 @@ async function findTestByIdForStudent(testId, client = pool) {
   );
   const test = rows[0] || null;
   if (!test) return null;
-  // Return questions WITHOUT correct answers, randomized order
+  // Return questions WITHOUT correct answers, shuffled in app
   const { rows: questions } = await client.query(
     `SELECT id, question, options, marks
-     FROM questions WHERE test_id = $1 ORDER BY RANDOM()`,
+     FROM questions WHERE test_id = $1 ORDER BY id`,
     [testId],
   );
+  // Fisher-Yates shuffle
+  for (let i = questions.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [questions[i], questions[j]] = [questions[j], questions[i]];
+  }
   test.questions = questions;
   return test;
 }
@@ -391,6 +396,57 @@ async function findAttemptByTestAndStudent(testId, studentId, client = pool) {
   return rows[0] || null;
 }
 
+// ─── Bulk Operations ────────────────────────────────────────
+
+async function bulkAddQuestions(testId, questions, client = pool) {
+  if (!questions.length) return [];
+  const values = [];
+  const placeholders = questions.map((q, i) => {
+    const base = i * 5;
+    values.push(testId, q.question, q.options || [], q.correctAnswer, q.marks ?? 1);
+    return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`;
+  });
+  const { rows } = await client.query(
+    `INSERT INTO questions (test_id, question, options, correct_option, marks)
+     VALUES ${placeholders.join(', ')}
+     RETURNING id, question, options, correct_option AS "correctAnswer",
+               marks, created_at AS "createdAt"`,
+    values,
+  );
+  return rows;
+}
+
+async function bulkSaveAnswers(attemptId, answers, client = pool) {
+  const entries = Object.entries(answers);
+  if (!entries.length) return [];
+  const values = [];
+  const placeholders = entries.map(([questionId, selectedOption], i) => {
+    const base = i * 3;
+    values.push(attemptId, questionId, selectedOption);
+    return `($${base + 1}, $${base + 2}, $${base + 3})`;
+  });
+  const { rows } = await client.query(
+    `INSERT INTO answers (attempt_id, question_id, selected_option)
+     VALUES ${placeholders.join(', ')}
+     ON CONFLICT (attempt_id, question_id)
+     DO UPDATE SET selected_option = EXCLUDED.selected_option
+     RETURNING id, attempt_id AS "attemptId", question_id AS "questionId",
+               selected_option AS "selectedOption"`,
+    values,
+  );
+  return rows;
+}
+
+async function findAttemptedTestIdsByUser(userId, testIds, client = pool) {
+  if (!testIds.length) return new Set();
+  const { rows } = await client.query(
+    `SELECT test_id AS "testId" FROM attempts
+     WHERE user_id = $1 AND test_id = ANY($2::uuid[])`,
+    [userId, testIds],
+  );
+  return new Set(rows.map(r => r.testId));
+}
+
 // ─── Exports ─────────────────────────────────────────────────
 
 export {
@@ -421,6 +477,9 @@ export {
   findAttemptsByTestId,
   ensureEvaluationExists,
   findAttemptByTestAndStudent,
+  bulkAddQuestions,
+  bulkSaveAnswers,
+  findAttemptedTestIdsByUser,
 };
 
 export default {
@@ -451,4 +510,7 @@ export default {
   findAttemptsByTestId,
   ensureEvaluationExists,
   findAttemptByTestAndStudent,
+  bulkAddQuestions,
+  bulkSaveAnswers,
+  findAttemptedTestIdsByUser,
 };

@@ -95,6 +95,23 @@ async function bulkRemoveShortlist(recruiterId, studentIds, client = pool) {
   return rowCount;
 }
 
+async function bulkInsertShortlists(recruiterId, items, client = pool) {
+  if (!items.length) return 0;
+  const values = [];
+  const placeholders = items.map((item, i) => {
+    const base = i * 3;
+    values.push(recruiterId, item.studentId, item.course);
+    return `($${base + 1}, $${base + 2}, $${base + 3})`;
+  });
+  const { rowCount } = await client.query(
+    `INSERT INTO recruiter_shortlists (recruiter_id, student_id, course)
+     VALUES ${placeholders.join(', ')}
+     ON CONFLICT (recruiter_id, student_id, course) DO NOTHING`,
+    values,
+  );
+  return rowCount;
+}
+
 async function getRecruiterShortlist(recruiterId, client = pool) {
   const { rows } = await client.query(
     `
@@ -301,6 +318,7 @@ export {
   insertShortlist,
   removeShortlist,
   bulkRemoveShortlist,
+  bulkInsertShortlists,
   getRecruiterShortlist,
   getAdminRecruiterShortlist,
   getDistinctCities,
@@ -320,6 +338,7 @@ export default {
   insertShortlist,
   removeShortlist,
   bulkRemoveShortlist,
+  bulkInsertShortlists,
   getRecruiterShortlist,
   getAdminRecruiterShortlist,
   getDistinctCities,

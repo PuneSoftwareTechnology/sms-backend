@@ -213,6 +213,9 @@ async function getMyFullProfile(studentId) {
   // Resolve CV presigned URL
   const cvUrl = cv?.file_url ? await s3Service.resolvePresignedUrl(cv.file_url) : null;
 
+  // Resolve QR code image presigned URL
+  const qrImageUrl = activeQr?.image_url ? await s3Service.resolvePresignedUrl(activeQr.image_url) : "";
+
   // Build payment summary
   let paymentSummary = null;
   if (enrollment) {
@@ -249,7 +252,7 @@ async function getMyFullProfile(studentId) {
       total_fee: Number(enrollment.total_fee || 0),
       paid_amount: paid,
       pending_amount: Number(enrollment.total_fee || 0) - paid,
-      qr_code_url: activeQr?.image_url || "",
+      qr_code_url: qrImageUrl,
       qr_bank_name: activeQr?.bank_name || "",
       installment1_amount: inst1.amount,
       installment1_date: inst1.date,

@@ -90,18 +90,8 @@ async function bulkRemoveShortlist(recruiterId, studentIds) {
 }
 
 async function bulkShortlist(recruiterId, items) {
-  const results = { shortlisted: 0, skipped: 0 };
-  for (const item of items) {
-    const payload = { recruiterId, studentId: item.studentId, course: item.course };
-    const exists = await recruiterRepository.shortlistExists(payload);
-    if (exists) {
-      results.skipped++;
-      continue;
-    }
-    await recruiterRepository.insertShortlist(payload);
-    results.shortlisted++;
-  }
-  return results;
+  const shortlisted = await recruiterRepository.bulkInsertShortlists(recruiterId, items);
+  return { shortlisted, skipped: items.length - shortlisted };
 }
 
 async function createRecruiter(payload) {

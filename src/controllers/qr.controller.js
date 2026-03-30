@@ -2,7 +2,7 @@ import qrService from '../services/qr.service.js';
 import { ok } from '../utils/apiResponse.js';
 
 async function createQr(req, res) {
-  const data = await qrService.createQr(req.validated.body);
+  const data = await qrService.createQr(req.validated.body, req.file);
   return ok(res, data, 'QR created', 201);
 }
 

@@ -16,16 +16,13 @@ async function createTest(payload) {
 
   // Bulk insert questions if provided
   if (payload.questions && payload.questions.length > 0) {
-    for (const q of payload.questions) {
-      const correctAnswer = q.options[q.correctOptionIndex];
-      await testRepository.addQuestion(test.id, {
-        question: q.question,
-        options: q.options,
-        correctAnswer,
-        marks: q.marks ?? 1,
-      });
-    }
-    // Recalculate total marks
+    const questions = payload.questions.map(q => ({
+      question: q.question,
+      options: q.options,
+      correctAnswer: q.options[q.correctOptionIndex],
+      marks: q.marks ?? 1,
+    }));
+    await testRepository.bulkAddQuestions(test.id, questions);
     await testRepository.recalcTotalMarks(test.id);
   }
 
@@ -57,15 +54,13 @@ async function updateTest(testId, payload) {
   // Replace questions if provided
   if (questions && questions.length > 0) {
     await testRepository.deleteQuestionsByTestId(testId);
-    for (const q of questions) {
-      const correctAnswer = q.options[q.correctOptionIndex];
-      await testRepository.addQuestion(testId, {
-        question: q.question,
-        options: q.options,
-        correctAnswer,
-        marks: q.marks ?? 1,
-      });
-    }
+    const mapped = questions.map(q => ({
+      question: q.question,
+      options: q.options,
+      correctAnswer: q.options[q.correctOptionIndex],
+      marks: q.marks ?? 1,
+    }));
+    await testRepository.bulkAddQuestions(testId, mapped);
     await testRepository.recalcTotalMarks(testId);
   }
 
@@ -128,19 +123,18 @@ async function getAvailableTests(studentId) {
 
   // Only fetch tests matching the student's course
   const tests = await testRepository.findPublishedTestsByCourse(enrollment.course);
-  const available = [];
-  for (const test of tests) {
-    const attempt = await testRepository.findAttemptByUserAndTest(studentId, test.id);
-    if (!attempt) {
-      // Also check if test is within time window
-      const now = new Date();
-      const endTime = test.endTime ? new Date(test.endTime) : null;
-      if (!endTime || now <= endTime) {
-        available.push(test);
-      }
-    }
-  }
-  return available;
+  if (!tests.length) return [];
+
+  // Batch-fetch all attempts for this student in one query
+  const testIds = tests.map(t => t.id);
+  const attemptedIds = await testRepository.findAttemptedTestIdsByUser(studentId, testIds);
+
+  const now = new Date();
+  return tests.filter(test => {
+    if (attemptedIds.has(test.id)) return false;
+    const endTime = test.endTime ? new Date(test.endTime) : null;
+    return !endTime || now <= endTime;
+  });
 }
 
 async function startTest(studentId, testId) {
@@ -208,10 +202,8 @@ async function submitTest(attemptId, studentId, answers) {
     throw new ApiError(400, 'Test submission window has expired');
   }
 
-  // Save all answers
-  for (const [questionId, selectedOption] of Object.entries(answers)) {
-    await testRepository.saveAnswer(attemptId, questionId, selectedOption);
-  }
+  // Save all answers in one query
+  await testRepository.bulkSaveAnswers(attemptId, answers);
 
   // Calculate score
   const questions = await testRepository.findQuestionsByTestId(attempt.testId);

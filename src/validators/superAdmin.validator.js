@@ -13,8 +13,12 @@ const createAdminSchema = z.object({
 
 const createQrSchema = z.object({
   body: z.object({
-    label: z.string().optional(),
-    imageUrl: z.string().url().optional(),
+    bank_name: z.string().min(1),
+    branch: z.string().optional(),
+    upi_id: z.string().min(1),
+    account_number: z.string().min(1),
+    ifsc_code: z.string().min(1),
+    is_active: z.string().optional(),
   }),
   params: z.object({}).optional(),
   query: z.object({}).optional(),
