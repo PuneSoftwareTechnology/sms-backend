@@ -195,7 +195,7 @@ async function getMyFullProfile(studentId) {
   // Fetch payment data, QR code, CV, evaluations, and project submission in parallel
   const [qrResult, payments, cv, evaluations, projectSubmissions] = await Promise.all([
     pool.query(
-      "SELECT image_url, bank_name FROM qr_codes WHERE is_active = true LIMIT 1",
+      "SELECT image_url, bank_name, branch, upi_id, account_number, ifsc_code FROM qr_codes WHERE is_active = true LIMIT 1",
     ),
     enrollment
       ? paymentRepository.findByEnrollmentId(enrollment.id)
@@ -263,6 +263,9 @@ async function getMyFullProfile(studentId) {
       pending_amount: Number(enrollment.total_fee || 0) - paid,
       qr_code_url: qrImageUrl,
       qr_bank_name: activeQr?.bank_name || "",
+      qr_upi_id: activeQr?.upi_id || "",
+      qr_account_number: activeQr?.account_number || "",
+      qr_ifsc_code: activeQr?.ifsc_code || "",
       installment1_amount: inst1.amount,
       installment1_date: inst1.date,
       installment1_mode: inst1.mode,
