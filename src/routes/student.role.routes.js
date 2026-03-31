@@ -4,7 +4,7 @@ import validate from '../middlewares/validate.middleware.js';
 import authMiddleware from '../middlewares/auth.middleware.js';
 import authorizeRoles from '../middlewares/authorize.middleware.js';
 import studentApprovalMiddleware from '../middlewares/studentApproval.middleware.js';
-import upload, { imageUpload } from '../middlewares/upload.middleware.js';
+import upload, { imageUpload, certificateUpload } from '../middlewares/upload.middleware.js';
 import studentController from '../controllers/student.controller.js';
 import testController from '../controllers/test.controller.js';
 import { updateProfileSchema, signupSchema, uploadUrlSchema, uploadConfirmSchema } from '../validators/student.validator.js';
@@ -27,7 +27,7 @@ router.post('/tests/:testId/start', validate(testIdParamSchema), asyncHandler(te
 router.post('/tests/:testId/submit', validate(submitTestSchema), asyncHandler(testController.submitTest));
 router.post('/project-upload', upload.single('file'), asyncHandler(studentController.uploadProject));
 router.post('/cv-upload', upload.single('file'), asyncHandler(studentController.uploadCv));
-router.post('/certificate-upload', upload.single('file'), asyncHandler(studentController.uploadCertificate));
+router.post('/certificate-upload', certificateUpload.single('file'), asyncHandler(studentController.uploadCertificate));
 router.post('/upload-url', validate(uploadUrlSchema), asyncHandler(studentController.getUploadUrl));
 router.post('/upload-confirm', validate(uploadConfirmSchema), asyncHandler(studentController.confirmUpload));
 

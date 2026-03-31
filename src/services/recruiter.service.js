@@ -1,4 +1,4 @@
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import ApiError from "../utils/apiError.js";
 import pool from "../config/db.js";
 import recruiterRepository from "../repositories/recruiter.repository.js";

@@ -1,4 +1,4 @@
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import pool from "../config/db.js";
 import ApiError from "../utils/apiError.js";
 import userRepository from "../repositories/user.repository.js";
@@ -209,6 +209,19 @@ async function getMyFullProfile(studentId) {
 
   // Resolve profile photo presigned URL
   const resolvedProfile = await resolveProfileUrls(profile);
+
+  // Resolve certificate presigned URLs inside certifications JSON
+  if (resolvedProfile.certifications?.length) {
+    resolvedProfile.certifications = await Promise.all(
+      resolvedProfile.certifications.map(async (cert) => {
+        const c = typeof cert === 'string' ? { name: cert } : cert;
+        return {
+          ...c,
+          certificate: c.certificate ? await s3Service.resolvePresignedUrl(c.certificate) : undefined,
+        };
+      }),
+    );
+  }
 
   // Resolve CV presigned URL
   const cvUrl = cv?.file_url ? await s3Service.resolvePresignedUrl(cv.file_url) : null;

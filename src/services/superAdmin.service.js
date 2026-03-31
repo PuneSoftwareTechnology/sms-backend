@@ -1,4 +1,4 @@
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import ApiError from "../utils/apiError.js";
 import userRepository from "../repositories/user.repository.js";
 

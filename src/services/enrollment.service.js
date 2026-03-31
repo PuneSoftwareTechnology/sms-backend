@@ -1,4 +1,4 @@
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import pool from "../config/db.js";
 import enrollmentRepository from "../repositories/enrollment.repository.js";
 import userRepository from "../repositories/user.repository.js";

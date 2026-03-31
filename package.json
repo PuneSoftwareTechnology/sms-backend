@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "check": "node -e \"import('./src/app.js').then(() => console.log('App loaded'))\""
+    "check": "node -e \"import('./src/app.js').then(() => console.log('App loaded'))\"",
+    "build": "node esbuild.config.js",
+    "build:check": "node -e \"import('./dist/lambda.mjs').then(m => console.log('Build OK, exports:', Object.keys(m)))\""
   },
   "keywords": [
     "express",
@@ -21,7 +23,7 @@
     "@aws-sdk/client-s3": "^3.1019.0",
     "@aws-sdk/client-ses": "^3.1019.0",
     "@aws-sdk/s3-request-presigner": "^3.1019.0",
-    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
@@ -33,5 +35,8 @@
     "pg": "^8.18.0",
     "serverless-http": "^3.2.0",
     "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.4"
   }
 }

@@ -1,4 +1,4 @@
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import ApiError from "../utils/apiError.js";
 import { signToken, verifyToken } from "../utils/jwt.js";

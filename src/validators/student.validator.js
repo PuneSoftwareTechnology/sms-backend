@@ -27,7 +27,7 @@ const updateProfileSchema = z.object({
     nonItExperienceMonths: z.coerce.number().min(0).max(11).optional(),
     certifications: z.array(z.object({
       name: z.string().min(1),
-      url: z.string().url(),
+      certificate: z.string().optional(),
     })).optional(),
   }),
   params: z.object({}).optional(),

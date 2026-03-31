@@ -14,6 +14,12 @@ const imageMimeTypes = new Set([
   'image/webp',
 ]);
 
+const certificateMimeTypes = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+]);
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -42,5 +48,19 @@ const imageUpload = multer({
   },
 });
 
-export { imageUpload };
+const certificateUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+  },
+  fileFilter: (_req, file, cb) => {
+    if (!certificateMimeTypes.has(file.mimetype)) {
+      cb(new ApiError(400, 'Only PDF, JPEG and PNG files are allowed for certificates'));
+      return;
+    }
+    cb(null, true);
+  },
+});
+
+export { imageUpload, certificateUpload };
 export default upload;
