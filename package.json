@@ -34,7 +34,7 @@
     "node-cache": "^5.1.2",
     "node-cron": "^4.2.1",
     "pg": "^8.18.0",
-    "serverless-http": "^3.2.0",
+    "serverless-http": "^4.0.0",
     "zod": "^4.1.11"
   },
   "devDependencies": {

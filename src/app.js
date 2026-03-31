@@ -22,6 +22,23 @@ app.use(
 app.use(compression());
 app.use(express.json({ limit: "1mb" }));
 
+// Fallback body parser for Lambda: serverless-http@3 + Express 5
+// Express 5's body parser skips the custom stream created by serverless-http,
+// so we manually parse the body from the API Gateway event.
+app.use((req, res, next) => {
+  if (req.body === undefined && req.apiGateway?.event?.body) {
+    const { body, isBase64Encoded } = req.apiGateway.event;
+    const raw = isBase64Encoded
+      ? Buffer.from(body, "base64").toString("utf8")
+      : body;
+    const ct = (req.headers["content-type"] || "").toLowerCase();
+    if (ct.includes("application/json")) {
+      try { req.body = JSON.parse(raw); } catch { /* leave undefined */ }
+    }
+  }
+  next();
+});
+
 // Request ID + request logger
 app.use((req, res, next) => {
   const requestId = req.headers["x-amzn-requestid"] || crypto.randomUUID();
