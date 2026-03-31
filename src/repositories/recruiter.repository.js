@@ -3,36 +3,42 @@ import { parsePagination, paginatedResult } from '../validators/common.validator
 
 async function findCandidates(filters = {}, recruiterId, client = pool) {
   const { page, limit, offset } = parsePagination(filters);
-  const values = [recruiterId];
+
+  // Build filter conditions — count query params start at $1
+  const filterValues = [];
   const conditions = ["u.role = 'STUDENT'", "u.is_approved = true"];
 
   if (filters.city) {
-    values.push(filters.city);
-    conditions.push(`sp.city = $${values.length}`);
+    filterValues.push(filters.city);
+    conditions.push(`sp.city = $${filterValues.length}`);
   }
   if (filters.course) {
-    values.push(filters.course);
-    conditions.push(`e.course = $${values.length}`);
+    filterValues.push(filters.course);
+    conditions.push(`e.course = $${filterValues.length}`);
   }
   if (filters.minExperience !== undefined) {
-    values.push(filters.minExperience);
-    conditions.push(`sp.it_exp_years >= $${values.length}`);
+    filterValues.push(filters.minExperience);
+    conditions.push(`sp.it_exp_years >= $${filterValues.length}`);
   }
 
   const whereClause = conditions.join(" AND ");
-  const countValues = [...values];
 
+  // Count query — no recruiterId needed
   const countResult = await client.query(
     `SELECT COUNT(*)::int AS total
      FROM users u
      JOIN student_profiles sp ON u.id = sp.user_id
      JOIN enrollments e ON u.id = e.student_id
      WHERE ${whereClause}`,
-    countValues,
+    filterValues,
   );
   const total = countResult.rows[0].total;
 
-  values.push(limit, offset);
+  // Main query — $1 = recruiterId, filter params shift by +1, then limit/offset
+  const mainWhere = filterValues.length > 0
+    ? whereClause.replace(/\$(\d+)/g, (_, n) => `$${Number(n) + 1}`)
+    : whereClause;
+  const mainValues = [recruiterId, ...filterValues, limit, offset];
 
   const { rows } = await client.query(
     `
@@ -51,11 +57,11 @@ async function findCandidates(filters = {}, recruiterId, client = pool) {
       LEFT JOIN cvs cv ON u.id = cv.student_id
       LEFT JOIN recruiter_shortlists rs
         ON rs.student_id = u.id AND rs.recruiter_id = $1 AND rs.course = e.course
-      WHERE ${whereClause}
+      WHERE ${mainWhere}
       ORDER BY u.created_at DESC
-      LIMIT $${values.length - 1} OFFSET $${values.length}
+      LIMIT $${mainValues.length - 1} OFFSET $${mainValues.length}
     `,
-    values,
+    mainValues,
   );
 
   return { ...paginatedResult(rows, total, page, limit) };

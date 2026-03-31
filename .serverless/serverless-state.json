@@ -152,7 +152,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-ap-south-1-9f2ef30f-e539",
-                "S3Key": "serverless/sms-backend/prod/1774937220531-2026-03-31T06:07:00.531Z/api.zip"
+                "S3Key": "serverless/sms-backend/prod/1774938963382-2026-03-31T06:36:03.382Z/api.zip"
               },
               "Handler": "dist/lambda.handler",
               "Runtime": "nodejs20.x",
@@ -192,7 +192,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-ap-south-1-9f2ef30f-e539",
-                "S3Key": "serverless/sms-backend/prod/1774937220531-2026-03-31T06:07:00.531Z/cron.zip"
+                "S3Key": "serverless/sms-backend/prod/1774938963382-2026-03-31T06:36:03.382Z/cron.zip"
               },
               "Handler": "dist/cron.deactivateInactiveRecruiters",
               "Runtime": "nodejs20.x",
@@ -238,14 +238,14 @@
               "Description": "Daily recruiter deactivation"
             }
           },
-          "ApiLambdaVersionbtmkEZEAE7xEuooZbn2XI5vg3QphYzaSukDMlOBKC0": {
+          "ApiLambdaVersionoofEFssGattcNrho01XvFNl8YJZRs4vZEnxrLQN5RA": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "ApiLambdaFunction"
               },
-              "CodeSha256": "evOKZWCj0vhP2XoFHvuUPouEvNqkig2W1nbwZfsjOR4=",
+              "CodeSha256": "d3bSX2Ok07sxxiBs9wQwn3XYPpyP1YlZByZrPbYmYhk=",
               "Description": "SMS Backend API"
             }
           },
@@ -419,7 +419,7 @@
           "ApiLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "ApiLambdaVersionbtmkEZEAE7xEuooZbn2XI5vg3QphYzaSukDMlOBKC0"
+              "Ref": "ApiLambdaVersionoofEFssGattcNrho01XvFNl8YJZRs4vZEnxrLQN5RA"
             },
             "Export": {
               "Name": "sls-sms-backend-prod-ApiLambdaFunctionQualifiedArn"
@@ -499,7 +499,7 @@
         "timeout": 29,
         "runtime": "nodejs20.x",
         "vpc": {},
-        "versionLogicalId": "ApiLambdaVersionbtmkEZEAE7xEuooZbn2XI5vg3QphYzaSukDMlOBKC0"
+        "versionLogicalId": "ApiLambdaVersionoofEFssGattcNrho01XvFNl8YJZRs4vZEnxrLQN5RA"
       },
       "cron": {
         "handler": "dist/cron.deactivateInactiveRecruiters",
@@ -544,7 +544,7 @@
         ],
         "artifactsS3KeyDirname": "serverless/sms-backend/prod/code-artifacts",
         "deploymentBucket": "serverless-framework-deployments-ap-south-1-9f2ef30f-e539",
-        "artifactDirectoryName": "serverless/sms-backend/prod/1774937220531-2026-03-31T06:07:00.531Z"
+        "artifactDirectoryName": "serverless/sms-backend/prod/1774938963382-2026-03-31T06:36:03.382Z"
       },
       "functions": {
         "$ref": "$[\"service\"][\"functions\"]"
@@ -556,7 +556,7 @@
   },
   "package": {
     "individually": true,
-    "artifactDirectoryName": "serverless/sms-backend/prod/1774937220531-2026-03-31T06:07:00.531Z",
+    "artifactDirectoryName": "serverless/sms-backend/prod/1774938963382-2026-03-31T06:36:03.382Z",
     "artifact": ""
   }
 }

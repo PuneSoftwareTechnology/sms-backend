@@ -1,4 +1,5 @@
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { NodeHttpHandler } from '@smithy/node-http-handler';
 import { Agent } from 'node:https';
 import env from '../config/env.js';
 
@@ -8,7 +9,9 @@ function createSesClient() {
   const config = {
     region: env.awsRegion,
     // Reuse TCP connections across invocations in warm Lambda containers
-    requestHandler: { httpsAgent: new Agent({ keepAlive: true }) },
+    requestHandler: new NodeHttpHandler({
+      httpsAgent: new Agent({ keepAlive: true }),
+    }),
   };
 
   // On Lambda, credentials come from IAM role automatically.

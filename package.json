@@ -9,7 +9,8 @@
     "dev": "node --watch src/server.js",
     "check": "node -e \"import('./src/app.js').then(() => console.log('App loaded'))\"",
     "build": "node esbuild.config.js",
-    "build:check": "node -e \"import('./dist/lambda.mjs').then(m => console.log('Build OK, exports:', Object.keys(m)))\""
+    "build:check": "node -e \"import('./dist/lambda.mjs').then(m => console.log('Build OK, exports:', Object.keys(m)))\"",
+    "deploy": "npm run build && npx serverless deploy"
   },
   "keywords": [
     "express",
