@@ -68,6 +68,3 @@ functions:
       - schedule:
           rate: cron(30 1 * * ? *)
           enabled: true
-
-plugins:
-  - serverless-plugin-common-excludes

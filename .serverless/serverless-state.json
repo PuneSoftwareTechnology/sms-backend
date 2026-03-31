@@ -1,0 +1,562 @@
+{
+  "service": {
+    "service": "sms-backend",
+    "serviceObject": {
+      "name": "sms-backend"
+    },
+    "provider": {
+      "name": "aws",
+      "runtime": "nodejs20.x",
+      "region": "ap-south-1",
+      "stage": "prod",
+      "memorySize": 512,
+      "timeout": 29,
+      "architecture": "arm64",
+      "environment": {
+        "NODE_ENV": "production",
+        "DATABASE_URL": "postgresql://neondb_owner:npg_ngJc93jQawmC@ep-super-snow-a1edrfb3-pooler.ap-southeast-1.aws.neon.tech/neondb?statusColor=686b6f&env=&name=SMS&tLSMode=0&safeModeLevel=0&advancedSafeModeLevel=0",
+        "JWT_SECRET": "JKm8rvbo53RkK0nJ74NZNZfMvdYQhCPdL6IonmF5Sh+MAZNLrkVBuIGc5b4w1gveaoRIEgitYdD+aXVfEbiBDA==",
+        "JWT_EXPIRES_IN": "30d",
+        "CORS_ORIGIN": "https://training2expert.vercel.app,http://localhost:3000",
+        "FRONTEND_URL": "https://training2expert.vercel.app",
+        "S3_BUCKET": "tch-pst-sms-storage-2026",
+        "S3_SIGNED_URL_EXPIRY_SECONDS": "300",
+        "SES_FROM_EMAIL": "no-reply@example.com"
+      },
+      "iam": {
+        "role": {
+          "statements": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:DeleteObject"
+              ],
+              "Resource": "arn:aws:s3:::tch-pst-sms-storage-2026/*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "ses:SendEmail",
+                "ses:SendRawEmail"
+              ],
+              "Resource": "*"
+            }
+          ]
+        }
+      },
+      "versionFunctions": true,
+      "compiledCloudFormationTemplate": {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "The AWS CloudFormation template for this Serverless application",
+        "Resources": {
+          "ApiLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/sms-backend-prod-api"
+            }
+          },
+          "CronLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/sms-backend-prod-cron"
+            }
+          },
+          "IamRoleLambdaExecution": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+              "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": [
+                        "lambda.amazonaws.com"
+                      ]
+                    },
+                    "Action": [
+                      "sts:AssumeRole"
+                    ]
+                  }
+                ]
+              },
+              "Policies": [
+                {
+                  "PolicyName": {
+                    "Fn::Join": [
+                      "-",
+                      [
+                        "sms-backend",
+                        "prod",
+                        "lambda"
+                      ]
+                    ]
+                  },
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:CreateLogStream",
+                          "logs:CreateLogGroup",
+                          "logs:TagResource"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/sms-backend-prod*:*"
+                          }
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:PutLogEvents"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/sms-backend-prod*:*:*"
+                          }
+                        ]
+                      },
+                      {
+                        "$ref": "$[\"service\"][\"provider\"][\"iam\"][\"role\"][\"statements\"][0]"
+                      },
+                      {
+                        "$ref": "$[\"service\"][\"provider\"][\"iam\"][\"role\"][\"statements\"][1]"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Path": "/",
+              "RoleName": {
+                "Fn::Join": [
+                  "-",
+                  [
+                    "sms-backend",
+                    "prod",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    "lambdaRole"
+                  ]
+                ]
+              }
+            }
+          },
+          "ApiLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-ap-south-1-9f2ef30f-e539",
+                "S3Key": "serverless/sms-backend/prod/1774937220531-2026-03-31T06:07:00.531Z/api.zip"
+              },
+              "Handler": "dist/lambda.handler",
+              "Runtime": "nodejs20.x",
+              "FunctionName": "sms-backend-prod-api",
+              "MemorySize": 512,
+              "Timeout": 29,
+              "Architectures": [
+                "arm64"
+              ],
+              "Description": "SMS Backend API",
+              "Environment": {
+                "Variables": {
+                  "NODE_ENV": "production",
+                  "DATABASE_URL": "postgresql://neondb_owner:npg_ngJc93jQawmC@ep-super-snow-a1edrfb3-pooler.ap-southeast-1.aws.neon.tech/neondb?statusColor=686b6f&env=&name=SMS&tLSMode=0&safeModeLevel=0&advancedSafeModeLevel=0",
+                  "JWT_SECRET": "JKm8rvbo53RkK0nJ74NZNZfMvdYQhCPdL6IonmF5Sh+MAZNLrkVBuIGc5b4w1gveaoRIEgitYdD+aXVfEbiBDA==",
+                  "JWT_EXPIRES_IN": "30d",
+                  "CORS_ORIGIN": "https://training2expert.vercel.app,http://localhost:3000",
+                  "FRONTEND_URL": "https://training2expert.vercel.app",
+                  "S3_BUCKET": "tch-pst-sms-storage-2026",
+                  "S3_SIGNED_URL_EXPIRY_SECONDS": "300",
+                  "SES_FROM_EMAIL": "no-reply@example.com"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "ApiLogGroup"
+            ]
+          },
+          "CronLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-ap-south-1-9f2ef30f-e539",
+                "S3Key": "serverless/sms-backend/prod/1774937220531-2026-03-31T06:07:00.531Z/cron.zip"
+              },
+              "Handler": "dist/cron.deactivateInactiveRecruiters",
+              "Runtime": "nodejs20.x",
+              "FunctionName": "sms-backend-prod-cron",
+              "MemorySize": 256,
+              "Timeout": 60,
+              "Architectures": [
+                "arm64"
+              ],
+              "Description": "Daily recruiter deactivation",
+              "Environment": {
+                "Variables": {
+                  "NODE_ENV": "production",
+                  "DATABASE_URL": "postgresql://neondb_owner:npg_ngJc93jQawmC@ep-super-snow-a1edrfb3-pooler.ap-southeast-1.aws.neon.tech/neondb?statusColor=686b6f&env=&name=SMS&tLSMode=0&safeModeLevel=0&advancedSafeModeLevel=0",
+                  "JWT_SECRET": "JKm8rvbo53RkK0nJ74NZNZfMvdYQhCPdL6IonmF5Sh+MAZNLrkVBuIGc5b4w1gveaoRIEgitYdD+aXVfEbiBDA==",
+                  "JWT_EXPIRES_IN": "30d",
+                  "CORS_ORIGIN": "https://training2expert.vercel.app,http://localhost:3000",
+                  "FRONTEND_URL": "https://training2expert.vercel.app",
+                  "S3_BUCKET": "tch-pst-sms-storage-2026",
+                  "S3_SIGNED_URL_EXPIRY_SECONDS": "300",
+                  "SES_FROM_EMAIL": "no-reply@example.com"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "CronLogGroup"
+            ]
+          },
+          "CronLambdaVersionvrP1SDg9JSDISdHimcWkwjIJwtP8EZnG8zmDnXB7l9o": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "CronLambdaFunction"
+              },
+              "CodeSha256": "VqY0E/HnVAVssVJ2XZIlusJ9bzpUN5Ld1UytUZF/VyM=",
+              "Description": "Daily recruiter deactivation"
+            }
+          },
+          "ApiLambdaVersionbtmkEZEAE7xEuooZbn2XI5vg3QphYzaSukDMlOBKC0": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "ApiLambdaFunction"
+              },
+              "CodeSha256": "evOKZWCj0vhP2XoFHvuUPouEvNqkig2W1nbwZfsjOR4=",
+              "Description": "SMS Backend API"
+            }
+          },
+          "CronEventsRuleSchedule1": {
+            "Type": "AWS::Events::Rule",
+            "Properties": {
+              "ScheduleExpression": "cron(30 1 * * ? *)",
+              "State": "ENABLED",
+              "Targets": [
+                {
+                  "Arn": {
+                    "Fn::GetAtt": [
+                      "CronLambdaFunction",
+                      "Arn"
+                    ]
+                  },
+                  "Id": "cronSchedule"
+                }
+              ]
+            }
+          },
+          "CronLambdaPermissionEventsRuleSchedule1": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "CronLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "events.amazonaws.com",
+              "SourceArn": {
+                "Fn::GetAtt": [
+                  "CronEventsRuleSchedule1",
+                  "Arn"
+                ]
+              }
+            }
+          },
+          "HttpApi": {
+            "Type": "AWS::ApiGatewayV2::Api",
+            "Properties": {
+              "Name": "prod-sms-backend",
+              "ProtocolType": "HTTP"
+            }
+          },
+          "HttpApiStage": {
+            "Type": "AWS::ApiGatewayV2::Stage",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "StageName": "$default",
+              "AutoDeploy": true,
+              "DefaultRouteSettings": {
+                "DetailedMetricsEnabled": false
+              }
+            }
+          },
+          "ApiLambdaPermissionHttpApi": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "ApiLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "HttpApi"
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "HttpApiIntegrationApi": {
+            "Type": "AWS::ApiGatewayV2::Integration",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "IntegrationType": "AWS_PROXY",
+              "IntegrationUri": {
+                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"ApiLambdaPermissionHttpApi\"][\"Properties\"][\"FunctionName\"]"
+              },
+              "PayloadFormatVersion": "2.0",
+              "TimeoutInMillis": 30000
+            }
+          },
+          "HttpApiRouteAnyProxyVar": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "ANY /{proxy+}",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationApi"
+                    }
+                  ]
+                ]
+              }
+            },
+            "DependsOn": "HttpApiIntegrationApi"
+          },
+          "HttpApiRouteAny": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "ANY /",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationApi"
+                    }
+                  ]
+                ]
+              }
+            },
+            "DependsOn": "HttpApiIntegrationApi"
+          }
+        },
+        "Outputs": {
+          "ServerlessDeploymentBucketName": {
+            "Value": "serverless-framework-deployments-ap-south-1-9f2ef30f-e539",
+            "Export": {
+              "Name": "sls-sms-backend-prod-ServerlessDeploymentBucketName"
+            }
+          },
+          "CronLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "CronLambdaVersionvrP1SDg9JSDISdHimcWkwjIJwtP8EZnG8zmDnXB7l9o"
+            },
+            "Export": {
+              "Name": "sls-sms-backend-prod-CronLambdaFunctionQualifiedArn"
+            }
+          },
+          "ApiLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "ApiLambdaVersionbtmkEZEAE7xEuooZbn2XI5vg3QphYzaSukDMlOBKC0"
+            },
+            "Export": {
+              "Name": "sls-sms-backend-prod-ApiLambdaFunctionQualifiedArn"
+            }
+          },
+          "HttpApiId": {
+            "Description": "Id of the HTTP API",
+            "Value": {
+              "Ref": "HttpApi"
+            },
+            "Export": {
+              "Name": "sls-sms-backend-prod-HttpApiId"
+            }
+          },
+          "HttpApiUrl": {
+            "Description": "URL of the HTTP API",
+            "Value": {
+              "Fn::Join": [
+                "",
+                [
+                  "https://",
+                  {
+                    "Ref": "HttpApi"
+                  },
+                  ".execute-api.",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ".",
+                  {
+                    "Ref": "AWS::URLSuffix"
+                  }
+                ]
+              ]
+            },
+            "Export": {
+              "Name": "sls-sms-backend-prod-HttpApiUrl"
+            }
+          }
+        }
+      },
+      "vpc": {}
+    },
+    "pluginsData": {},
+    "functions": {
+      "api": {
+        "handler": "dist/lambda.handler",
+        "description": "SMS Backend API",
+        "package": {
+          "patterns": [
+            "dist/lambda.mjs",
+            "dist/lambda.mjs.map"
+          ],
+          "artifact": ".serverless/api.zip"
+        },
+        "events": [
+          {
+            "httpApi": {
+              "path": "/{proxy+}",
+              "method": "ANY"
+            },
+            "resolvedMethod": "ANY",
+            "resolvedPath": "/{proxy+}"
+          },
+          {
+            "httpApi": {
+              "path": "/",
+              "method": "ANY"
+            },
+            "resolvedMethod": "ANY",
+            "resolvedPath": "/"
+          }
+        ],
+        "name": "sms-backend-prod-api",
+        "provisionedConcurrency": null,
+        "memory": 512,
+        "timeout": 29,
+        "runtime": "nodejs20.x",
+        "vpc": {},
+        "versionLogicalId": "ApiLambdaVersionbtmkEZEAE7xEuooZbn2XI5vg3QphYzaSukDMlOBKC0"
+      },
+      "cron": {
+        "handler": "dist/cron.deactivateInactiveRecruiters",
+        "description": "Daily recruiter deactivation",
+        "memorySize": 256,
+        "timeout": 60,
+        "package": {
+          "patterns": [
+            "dist/cron.mjs",
+            "dist/cron.mjs.map"
+          ],
+          "artifact": ".serverless/cron.zip"
+        },
+        "events": [
+          {
+            "schedule": {
+              "rate": [
+                "cron(30 1 * * ? *)"
+              ],
+              "enabled": true
+            }
+          }
+        ],
+        "name": "sms-backend-prod-cron",
+        "memory": 256,
+        "runtime": "nodejs20.x",
+        "vpc": {},
+        "versionLogicalId": "CronLambdaVersionvrP1SDg9JSDISdHimcWkwjIJwtP8EZnG8zmDnXB7l9o"
+      }
+    },
+    "configValidationMode": "warn",
+    "serviceFilename": "serverless",
+    "initialServerlessConfig": {
+      "service": "sms-backend",
+      "provider": {
+        "$ref": "$[\"service\"][\"provider\"]"
+      },
+      "package": {
+        "individually": true,
+        "patterns": [
+          "!**"
+        ],
+        "artifactsS3KeyDirname": "serverless/sms-backend/prod/code-artifacts",
+        "deploymentBucket": "serverless-framework-deployments-ap-south-1-9f2ef30f-e539",
+        "artifactDirectoryName": "serverless/sms-backend/prod/1774937220531-2026-03-31T06:07:00.531Z"
+      },
+      "functions": {
+        "$ref": "$[\"service\"][\"functions\"]"
+      }
+    },
+    "appId": null,
+    "orgId": null,
+    "layers": {}
+  },
+  "package": {
+    "individually": true,
+    "artifactDirectoryName": "serverless/sms-backend/prod/1774937220531-2026-03-31T06:07:00.531Z",
+    "artifact": ""
+  }
+}
