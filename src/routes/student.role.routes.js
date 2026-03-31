@@ -7,7 +7,7 @@ import studentApprovalMiddleware from '../middlewares/studentApproval.middleware
 import upload, { imageUpload } from '../middlewares/upload.middleware.js';
 import studentController from '../controllers/student.controller.js';
 import testController from '../controllers/test.controller.js';
-import { updateProfileSchema, signupSchema } from '../validators/student.validator.js';
+import { updateProfileSchema, signupSchema, uploadUrlSchema, uploadConfirmSchema } from '../validators/student.validator.js';
 import { testIdParamSchema, submitTestSchema } from '../validators/test.validator.js';
 
 const router = express.Router();
@@ -28,5 +28,7 @@ router.post('/tests/:testId/submit', validate(submitTestSchema), asyncHandler(te
 router.post('/project-upload', upload.single('file'), asyncHandler(studentController.uploadProject));
 router.post('/cv-upload', upload.single('file'), asyncHandler(studentController.uploadCv));
 router.post('/certificate-upload', upload.single('file'), asyncHandler(studentController.uploadCertificate));
+router.post('/upload-url', validate(uploadUrlSchema), asyncHandler(studentController.getUploadUrl));
+router.post('/upload-confirm', validate(uploadConfirmSchema), asyncHandler(studentController.confirmUpload));
 
 export default router;

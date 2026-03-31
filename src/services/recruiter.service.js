@@ -11,15 +11,15 @@ import s3Service from "../utils/s3.service.js";
 const MAX_DOWNLOADS = 100;
 
 async function filterCandidates(filters, recruiterId) {
-  const [items, courses, cities, experienceYears] = await Promise.all([
+  const [paginated, courses, cities, experienceYears] = await Promise.all([
     recruiterRepository.findCandidates(filters, recruiterId),
     enrollmentRepository.getDistinctCourses(),
     recruiterRepository.getDistinctCities(),
     recruiterRepository.getDistinctExperienceYears(),
   ]);
 
-  const resolvedItems = await s3Service.resolvePresignedUrlsInArray(items, ['cvUrl']);
-  return { items: resolvedItems, courses, cities, experienceYears };
+  const resolvedItems = await s3Service.resolvePresignedUrlsInArray(paginated.items, ['cvUrl']);
+  return { ...paginated, items: resolvedItems, courses, cities, experienceYears };
 }
 
 async function downloadCv(recruiterId, studentId) {
@@ -76,12 +76,12 @@ async function removeShortlist(recruiterId, studentId) {
   return removed;
 }
 
-async function getRecruiterShortlist(recruiterId) {
-  return recruiterRepository.getRecruiterShortlist(recruiterId);
+async function getRecruiterShortlist(recruiterId, filters = {}) {
+  return recruiterRepository.getRecruiterShortlist(recruiterId, filters);
 }
 
-async function getAdminRecruiterShortlist() {
-  return recruiterRepository.getAdminRecruiterShortlist();
+async function getAdminRecruiterShortlist(filters = {}) {
+  return recruiterRepository.getAdminRecruiterShortlist(filters);
 }
 
 async function bulkRemoveShortlist(recruiterId, studentIds) {
@@ -155,8 +155,8 @@ async function deleteRecruiter(id) {
   return deleted;
 }
 
-async function getAllRecruiters() {
-  return recruiterRepository.listAllRecruiters();
+async function getAllRecruiters(filters = {}) {
+  return recruiterRepository.listAllRecruiters(filters);
 }
 
 async function sendEmailToStudent(recruiterId, studentId, subject, body) {

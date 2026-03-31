@@ -116,8 +116,7 @@ async function uploadProfilePhoto(studentId, file) {
     throw new ApiError(400, "Profile photo is required");
   }
 
-  const oldProfile = await studentRepository.findFullProfile(studentId);
-  const oldPhotoKey = oldProfile?.profilePhoto;
+  const oldPhotoKey = await studentRepository.findProfilePhotoKey(studentId);
 
   const key = `${studentId}/profile-photo/${Date.now()}_${file.originalname}`;
   await s3Service.uploadBuffer(file.buffer, key, file.mimetype);
@@ -193,8 +192,8 @@ async function getMyFullProfile(studentId) {
 
   const enrollment = await enrollmentRepository.findByStudentId(studentId);
 
-  // Fetch payment data, QR code, CV, and evaluations in parallel
-  const [qrResult, payments, cv, evaluations] = await Promise.all([
+  // Fetch payment data, QR code, CV, evaluations, and project submission in parallel
+  const [qrResult, payments, cv, evaluations, projectSubmissions] = await Promise.all([
     pool.query(
       "SELECT image_url, bank_name FROM qr_codes WHERE is_active = true LIMIT 1",
     ),
@@ -203,6 +202,7 @@ async function getMyFullProfile(studentId) {
       : Promise.resolve([]),
     studentRepository.findCvByStudentId(studentId),
     studentRepository.findEvaluationsByStudentId(studentId),
+    studentRepository.findProjectSubmissionsByStudentId(studentId),
   ]);
 
   const activeQr = qrResult.rows[0] || null;
@@ -212,6 +212,15 @@ async function getMyFullProfile(studentId) {
 
   // Resolve CV presigned URL
   const cvUrl = cv?.file_url ? await s3Service.resolvePresignedUrl(cv.file_url) : null;
+
+  // Resolve project submission presigned URLs
+  const resolvedProjects = await Promise.all(
+    projectSubmissions.map(async (ps) => ({
+      id: ps.id,
+      url: await s3Service.resolvePresignedUrl(ps.fileUrl),
+      createdAt: ps.createdAt,
+    })),
+  );
 
   // Resolve QR code image presigned URL
   const qrImageUrl = activeQr?.image_url ? await s3Service.resolvePresignedUrl(activeQr.image_url) : "";
@@ -270,6 +279,7 @@ async function getMyFullProfile(studentId) {
     ...resolvedProfile,
     payments: paymentSummary,
     evaluations,
+    projectSubmissions: resolvedProjects,
     cvTemplates: [],
     cv: cv ? { url: cvUrl } : null,
   };
@@ -285,6 +295,45 @@ async function updateCommunicationScore(evaluationId, communicationScore) {
     throw new ApiError(404, "Evaluation not found");
   }
   return updated;
+}
+
+async function getUploadUrl(studentId, { type, filename, contentType }) {
+  const key = `${studentId}/${type}/${Date.now()}_${filename}`;
+  const url = await s3Service.getSignedUploadUrl(key, contentType);
+  return { url, key };
+}
+
+async function confirmUpload(studentId, { type, key }) {
+  if (!key.startsWith(`${studentId}/`)) {
+    throw new ApiError(403, "Key does not belong to this student");
+  }
+
+  switch (type) {
+    case 'profile-photo': {
+      const oldPhotoKey = await studentRepository.findProfilePhotoKey(studentId);
+      const updated = await studentRepository.updatePhotoUrl(studentId, key);
+      if (!updated) throw new ApiError(404, "Student profile not found");
+      if (oldPhotoKey && oldPhotoKey !== key) {
+        await s3Service.deleteObject(oldPhotoKey);
+      }
+      const fullProfile = await studentRepository.findFullProfile(studentId);
+      return resolveProfileUrls(fullProfile);
+    }
+    case 'cv': {
+      const existingCv = await studentRepository.findCvByStudentId(studentId);
+      const cv = await studentRepository.upsertCv(studentId, key);
+      if (existingCv && existingCv.file_url && existingCv.file_url !== key) {
+        await s3Service.deleteObject(existingCv.file_url);
+      }
+      return cv;
+    }
+    case 'project':
+      return studentRepository.createProjectSubmission(studentId, key);
+    case 'certificate':
+      return { url: key };
+    default:
+      throw new ApiError(400, "Unknown upload type");
+  }
 }
 
 async function uploadCertificate(studentId, file) {
@@ -308,6 +357,8 @@ export {
   uploadCv,
   uploadCertificate,
   updateCommunicationScore,
+  getUploadUrl,
+  confirmUpload,
 };
 
 export default {
@@ -321,4 +372,6 @@ export default {
   uploadCv,
   uploadCertificate,
   updateCommunicationScore,
+  getUploadUrl,
+  confirmUpload,
 };

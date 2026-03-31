@@ -32,5 +32,21 @@ const evaluationIdParamSchema = z.object({
   query: z.object({}).optional(),
 });
 
-export { uuidIdParamSchema, userIdParamSchema, enrollmentIdParamSchema, qrIdParamSchema, evaluationIdParamSchema };
-export default { uuidIdParamSchema, userIdParamSchema, enrollmentIdParamSchema, qrIdParamSchema, evaluationIdParamSchema };
+const paginationQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+function parsePagination(filters = {}) {
+  const page = Math.max(1, parseInt(filters.page, 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(filters.limit, 10) || 50));
+  const offset = (page - 1) * limit;
+  return { page, limit, offset };
+}
+
+function paginatedResult(rows, total, page, limit) {
+  return { items: rows, total, page, totalPages: Math.ceil(total / limit) };
+}
+
+export { uuidIdParamSchema, userIdParamSchema, enrollmentIdParamSchema, qrIdParamSchema, evaluationIdParamSchema, paginationQuerySchema, parsePagination, paginatedResult };
+export default { uuidIdParamSchema, userIdParamSchema, enrollmentIdParamSchema, qrIdParamSchema, evaluationIdParamSchema, paginationQuerySchema, parsePagination, paginatedResult };

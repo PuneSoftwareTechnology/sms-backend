@@ -4,14 +4,14 @@ import recruiterRepository from '../repositories/recruiter.repository.js';
 import s3Service from '../utils/s3.service.js';
 
 async function candidateFilter(filters) {
-  const [items, courses, cities] = await Promise.all([
+  const [paginated, courses, cities] = await Promise.all([
     reportRepository.candidateFilterReport(filters),
     enrollmentRepository.getDistinctCourses(),
     recruiterRepository.getDistinctCities(),
   ]);
 
-  const resolvedItems = await s3Service.resolvePresignedUrlsInArray(items, ['cvUrl']);
-  return { items: resolvedItems, courses, cities };
+  const resolvedItems = await s3Service.resolvePresignedUrlsInArray(paginated.items, ['cvUrl']);
+  return { ...paginated, items: resolvedItems, courses, cities };
 }
 
 async function addBulkComment(studentIds, comment, addedBy) {
@@ -27,8 +27,8 @@ async function getStudentEmails(studentIds) {
   return reportRepository.getStudentEmails(studentIds);
 }
 
-async function feeDue() {
-  return reportRepository.feeDueReport();
+async function feeDue(filters = {}) {
+  return reportRepository.feeDueReport(filters);
 }
 
 async function enrollmentFigures(filters) {
@@ -49,12 +49,16 @@ async function enrollmentFigures(filters) {
 }
 
 async function placementReport(filters) {
-  const [notContacted, contacted, courses] = await Promise.all([
+  const [notContactedResult, contactedResult, courses] = await Promise.all([
     reportRepository.placementNotContacted(filters),
     reportRepository.placementContacted(filters),
     enrollmentRepository.getDistinctCourses(),
   ]);
-  return { notContacted, contacted, courses };
+  return {
+    notContacted: notContactedResult.items,
+    contacted: contactedResult.items,
+    courses,
+  };
 }
 
 async function updatePlacementContact(enrollmentId, data) {

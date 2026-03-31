@@ -32,6 +32,7 @@ async function addPayment(payload) {
     to: enrollment.email,
     amount: payment.amount,
     receiptUrl: payment.receipt_url,
+    name: enrollment.name,
   });
 
   return {

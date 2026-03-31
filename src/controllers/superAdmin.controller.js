@@ -12,7 +12,7 @@ async function deleteAdmin(req, res) {
 }
 
 async function getAllAdmins(req, res) {
-  const admins = await superAdminService.getAllAdmins();
+  const admins = await superAdminService.getAllAdmins(req.query);
   return ok(res, admins, "Admins fetched");
 }
 

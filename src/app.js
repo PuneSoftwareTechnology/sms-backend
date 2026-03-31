@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import express from "express";
 import cors from "cors";
 import compression from "compression";
@@ -19,8 +20,13 @@ app.use(
   }),
 );
 app.use(compression());
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
+
+// Request ID + request logger
 app.use((req, res, next) => {
+  const requestId = req.headers["x-amzn-requestid"] || crypto.randomUUID();
+  res.setHeader("X-Request-Id", requestId);
+
   const start = Date.now();
   const { method, originalUrl } = req;
 
@@ -29,7 +35,7 @@ app.use((req, res, next) => {
     const status = res.statusCode;
     const cached = res.getHeader("X-Cache") || "-";
     console.log(
-      `[${new Date().toISOString()}] ${method} ${originalUrl} → ${status} (${duration}ms) cache:${cached}`,
+      `[${new Date().toISOString()}] ${requestId} ${method} ${originalUrl} → ${status} (${duration}ms) cache:${cached}`,
     );
   });
 

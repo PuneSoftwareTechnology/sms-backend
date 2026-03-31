@@ -9,7 +9,7 @@ async function createTest(req, res) {
 }
 
 async function getAllTests(req, res) {
-  const tests = await testService.getAllTests();
+  const tests = await testService.getAllTests(req.query);
   return ok(res, tests, 'All tests fetched');
 }
 
@@ -34,7 +34,7 @@ async function deleteTest(req, res) {
 }
 
 async function getTestAttempts(req, res) {
-  const attempts = await testService.getTestAttempts(req.params.id);
+  const attempts = await testService.getTestAttempts(req.params.id, req.query);
   return ok(res, attempts, 'Test attempts fetched');
 }
 

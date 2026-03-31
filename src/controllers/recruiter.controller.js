@@ -8,6 +8,8 @@ async function filterCandidates(req, res) {
     minExperience: req.query.minExperience
       ? Number(req.query.minExperience)
       : undefined,
+    page: req.query.page,
+    limit: req.query.limit,
   };
 
   const candidates = await recruiterService.filterCandidates(filters, req.user.id);
@@ -49,12 +51,12 @@ async function removeShortlist(req, res) {
 }
 
 async function getShortlist(req, res) {
-  const shortlist = await recruiterService.getRecruiterShortlist(req.user.id);
+  const shortlist = await recruiterService.getRecruiterShortlist(req.user.id, req.query);
   return ok(res, shortlist, "Shortlist fetched");
 }
 
 async function getAdminShortlist(req, res) {
-  const shortlist = await recruiterService.getAdminRecruiterShortlist();
+  const shortlist = await recruiterService.getAdminRecruiterShortlist(req.query);
   return ok(res, shortlist, "Recruiter shortlist fetched");
 }
 
@@ -93,7 +95,7 @@ async function deleteRecruiter(req, res) {
 }
 
 async function getAllRecruiters(req, res) {
-  const recruiters = await recruiterService.getAllRecruiters();
+  const recruiters = await recruiterService.getAllRecruiters(req.query);
   return ok(res, recruiters, "Recruiters fetched");
 }
 

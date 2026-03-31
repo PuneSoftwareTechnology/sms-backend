@@ -29,8 +29,8 @@ async function deleteAdmin(id) {
   return deleted;
 }
 
-async function getAllAdmins() {
-  return userRepository.listUsersByRole("ADMIN");
+async function getAllAdmins(filters = {}) {
+  return userRepository.listUsersByRole("ADMIN", filters);
 }
 
 export { createAdmin, deleteAdmin, getAllAdmins };

@@ -59,6 +59,20 @@ async function deleteObject(key) {
   }));
 }
 
+async function getSignedUploadUrl(key, contentType = 'application/octet-stream', expiresInSeconds = 300) {
+  ensureBucketConfigured();
+
+  const expiry = Math.min(Math.max(Number(expiresInSeconds || 300), 1), 3600);
+
+  const command = new PutObjectCommand({
+    Bucket: env.s3Bucket,
+    Key: key,
+    ContentType: contentType,
+  });
+
+  return getSignedUrl(s3, command, { expiresIn: expiry });
+}
+
 async function resolvePresignedUrl(key) {
   if (!key) return null;
   return getSignedDownloadUrl(key);
@@ -83,6 +97,6 @@ async function resolvePresignedUrlsInArray(items, fields) {
   return Promise.all(items.map((item) => resolvePresignedUrls(item, fields)));
 }
 
-export { uploadBuffer, getSignedDownloadUrl, deleteObject, resolvePresignedUrl, resolvePresignedUrls, resolvePresignedUrlsInArray };
+export { uploadBuffer, getSignedUploadUrl, getSignedDownloadUrl, deleteObject, resolvePresignedUrl, resolvePresignedUrls, resolvePresignedUrlsInArray };
 
-export default { uploadBuffer, getSignedDownloadUrl, deleteObject, resolvePresignedUrl, resolvePresignedUrls, resolvePresignedUrlsInArray };
+export default { uploadBuffer, getSignedUploadUrl, getSignedDownloadUrl, deleteObject, resolvePresignedUrl, resolvePresignedUrls, resolvePresignedUrlsInArray };

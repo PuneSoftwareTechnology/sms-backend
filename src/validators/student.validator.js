@@ -34,5 +34,24 @@ const updateProfileSchema = z.object({
   query: z.object({}).optional(),
 });
 
-export { signupSchema, updateProfileSchema };
-export default { signupSchema, updateProfileSchema };
+const uploadUrlSchema = z.object({
+  body: z.object({
+    type: z.enum(['profile-photo', 'cv', 'project', 'certificate']),
+    filename: z.string().min(1).max(255),
+    contentType: z.string().min(1).max(100),
+  }),
+  params: z.object({}).optional(),
+  query: z.object({}).optional(),
+});
+
+const uploadConfirmSchema = z.object({
+  body: z.object({
+    type: z.enum(['profile-photo', 'cv', 'project', 'certificate']),
+    key: z.string().min(1),
+  }),
+  params: z.object({}).optional(),
+  query: z.object({}).optional(),
+});
+
+export { signupSchema, updateProfileSchema, uploadUrlSchema, uploadConfirmSchema };
+export default { signupSchema, updateProfileSchema, uploadUrlSchema, uploadConfirmSchema };

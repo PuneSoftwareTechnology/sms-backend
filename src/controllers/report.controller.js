@@ -11,6 +11,8 @@ async function candidateFilter(req, res) {
     maxExperience: req.query.maxExperience,
     minTechnicalRating: req.query.minTechnicalRating,
     minCommunicationRating: req.query.minCommunicationRating,
+    page: req.query.page,
+    limit: req.query.limit,
   });
   return ok(res, rows, 'Candidate filter report fetched');
 }
@@ -44,7 +46,7 @@ async function addBulkComment(req, res) {
 }
 
 async function feeDue(req, res) {
-  const rows = await reportService.feeDue();
+  const rows = await reportService.feeDue(req.query);
   return ok(res, rows, 'Fee due report fetched');
 }
 
@@ -66,6 +68,8 @@ async function placementReport(req, res) {
     toDate: req.query.toDate,
     course: req.query.course,
     status: req.query.status,
+    page: req.query.page,
+    limit: req.query.limit,
   });
   return ok(res, result, 'Placement report fetched');
 }

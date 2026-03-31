@@ -54,6 +54,16 @@ async function uploadCertificate(req, res) {
   return ok(res, result, 'Certificate uploaded', 201);
 }
 
+async function getUploadUrl(req, res) {
+  const result = await studentService.getUploadUrl(req.user.id, req.validated.body);
+  return ok(res, result, 'Upload URL generated');
+}
+
+async function confirmUpload(req, res) {
+  const result = await studentService.confirmUpload(req.user.id, req.validated.body);
+  return ok(res, result, 'Upload confirmed');
+}
+
 export {
   signup,
   updateMyProfile,
@@ -65,6 +75,8 @@ export {
   uploadCv,
   uploadCertificate,
   updateCommunicationScore,
+  getUploadUrl,
+  confirmUpload,
 };
 
 export default {
@@ -78,4 +90,6 @@ export default {
   uploadCv,
   uploadCertificate,
   updateCommunicationScore,
+  getUploadUrl,
+  confirmUpload,
 };

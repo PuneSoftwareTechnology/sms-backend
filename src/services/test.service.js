@@ -29,8 +29,8 @@ async function createTest(payload) {
   return testRepository.findTestByIdForAdmin(test.id);
 }
 
-async function getAllTests() {
-  return testRepository.findAllTests();
+async function getAllTests(filters = {}) {
+  return testRepository.findAllTests(filters);
 }
 
 async function getTestByIdForAdmin(testId) {
@@ -108,10 +108,10 @@ async function deleteTest(testId) {
   return deleted;
 }
 
-async function getTestAttempts(testId) {
+async function getTestAttempts(testId, filters = {}) {
   const test = await testRepository.findById(testId);
   if (!test) throw new ApiError(404, 'Test not found');
-  return testRepository.findAttemptsByTestId(testId);
+  return testRepository.findAttemptsByTestId(testId, filters);
 }
 
 // ─── Student Functions ───────────────────────────────────────

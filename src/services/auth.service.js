@@ -70,7 +70,7 @@ async function forgotPassword(email) {
   const expiresAt = new Date(Date.now() + 1000 * 60 * 30);
   await authTokenRepository.createPasswordReset(user.id, token, expiresAt);
 
-  await emailService.sendPasswordResetEmail({ to: user.email, token });
+  await emailService.sendPasswordResetEmail({ to: user.email, token, name: user.name });
 
   return { sent: true };
 }

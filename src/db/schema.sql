@@ -229,6 +229,9 @@ CREATE TABLE IF NOT EXISTS cvs (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Ensure unique constraint exists even if table was created before UNIQUE was added
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cvs_student_id ON cvs(student_id);
+
 CREATE TABLE IF NOT EXISTS certifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -336,3 +339,11 @@ CREATE INDEX IF NOT EXISTS idx_candidate_comments_student ON candidate_comments(
 
 DROP TRIGGER IF EXISTS trg_evaluations_updated_at ON evaluations;
 CREATE TRIGGER trg_evaluations_updated_at BEFORE UPDATE ON evaluations FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- Composite indexes for common query patterns
+CREATE INDEX IF NOT EXISTS idx_enrollments_student_deleted ON enrollments(student_id, deleted);
+CREATE INDEX IF NOT EXISTS idx_enrollments_deleted_completion ON enrollments(deleted, completion_status);
+CREATE INDEX IF NOT EXISTS idx_tests_published_course ON tests(is_published, course) WHERE is_published = true;
+CREATE INDEX IF NOT EXISTS idx_questions_test_id ON questions(test_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_placement_not_contacted ON enrollments(end_date, deleted) WHERE deleted = FALSE AND contacted_date IS NULL;
+CREATE INDEX IF NOT EXISTS idx_enrollments_placement_contacted ON enrollments(contacted_date DESC, deleted) WHERE deleted = FALSE AND contacted_date IS NOT NULL;

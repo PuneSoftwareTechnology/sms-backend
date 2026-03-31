@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { parsePagination, paginatedResult } from '../validators/common.validator.js';
 
 async function findByEmail(email, client = pool) {
   const query = `
@@ -82,15 +83,24 @@ async function deleteUserByRole(id, role, client = pool) {
   return rows[0] || null;
 }
 
-async function listUsersByRole(role, client = pool) {
-  const query = `
-    SELECT id, name, email, phone, role, is_active, is_approved, is_email_verified, last_login, created_at
-    FROM users
-    WHERE role = $1
-    ORDER BY created_at DESC
-  `;
-  const { rows } = await client.query(query, [role]);
-  return rows;
+async function listUsersByRole(role, filters = {}, client = pool) {
+  const { page, limit, offset } = parsePagination(filters);
+
+  const countResult = await client.query(
+    'SELECT COUNT(*)::int AS total FROM users WHERE role = $1',
+    [role],
+  );
+  const total = countResult.rows[0].total;
+
+  const { rows } = await client.query(
+    `SELECT id, name, email, phone, role, is_active, is_approved, is_email_verified, last_login, created_at
+     FROM users
+     WHERE role = $1
+     ORDER BY created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [role, limit, offset],
+  );
+  return paginatedResult(rows, total, page, limit);
 }
 
 async function deactivateInactiveRecruiters(client = pool) {

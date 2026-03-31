@@ -1,6 +1,8 @@
 import pool from '../config/db.js';
+import { parsePagination, paginatedResult } from '../validators/common.validator.js';
 
 async function candidateFilterReport(filters = {}, client = pool) {
+  const { page, limit, offset } = parsePagination(filters);
   const values = [];
   const conditions = ["u.role = 'STUDENT'", "e.deleted = FALSE"];
 
@@ -33,6 +35,31 @@ async function candidateFilterReport(filters = {}, client = pool) {
     conditions.push(`COALESCE(ev.communication_score, 0) >= $${values.length}`);
   }
 
+  const whereClause = conditions.join(' AND ');
+  const countValues = [...values];
+
+  const countResult = await client.query(
+    `SELECT COUNT(*)::int AS total
+     FROM users u
+     JOIN student_profiles sp ON u.id = sp.user_id
+     JOIN enrollments e ON u.id = e.student_id AND e.deleted = FALSE
+     LEFT JOIN evaluations ev ON ev.enrollment_id = e.id
+     LEFT JOIN (
+       SELECT a.user_id, t.course,
+              SUM(a.score)::int       AS marks_scored,
+              SUM(a.total_marks)::int AS total_marks
+       FROM attempts a
+       JOIN tests t ON a.test_id = t.id
+       WHERE a.status IN ('submitted', 'expired')
+       GROUP BY a.user_id, t.course
+     ) ts ON ts.user_id = u.id AND ts.course = e.course
+     WHERE ${whereClause}`,
+    countValues,
+  );
+  const total = countResult.rows[0].total;
+
+  values.push(limit, offset);
+
   const { rows } = await client.query(
     `
       SELECT
@@ -60,13 +87,14 @@ async function candidateFilterReport(filters = {}, client = pool) {
         WHERE a.status IN ('submitted', 'expired')
         GROUP BY a.user_id, t.course
       ) ts ON ts.user_id = u.id AND ts.course = e.course
-      WHERE ${conditions.join(' AND ')}
+      WHERE ${whereClause}
       ORDER BY u.name ASC
+      LIMIT $${values.length - 1} OFFSET $${values.length}
     `,
     values,
   );
 
-  return rows;
+  return paginatedResult(rows, total, page, limit);
 }
 
 async function addBulkComment(studentIds, comment, addedBy, client = pool) {
@@ -84,31 +112,39 @@ async function addBulkComment(studentIds, comment, addedBy, client = pool) {
 
 async function getCvsByStudentIds(studentIds, client = pool) {
   if (!studentIds.length) return [];
-  const placeholders = studentIds.map((_, i) => `$${i + 1}`).join(', ');
   const { rows } = await client.query(
     `
       SELECT cv.student_id AS "studentId", cv.file_url AS "fileUrl", u.name, e.course
       FROM cvs cv
       JOIN users u ON cv.student_id = u.id
       LEFT JOIN enrollments e ON cv.student_id = e.student_id AND e.deleted = FALSE
-      WHERE cv.student_id IN (${placeholders})
+      WHERE cv.student_id = ANY($1::uuid[])
     `,
-    studentIds,
+    [studentIds],
   );
   return rows;
 }
 
 async function getStudentEmails(studentIds, client = pool) {
   if (!studentIds.length) return [];
-  const placeholders = studentIds.map((_, i) => `$${i + 1}`).join(', ');
   const { rows } = await client.query(
-    `SELECT id, name, email FROM users WHERE id IN (${placeholders})`,
-    studentIds,
+    `SELECT id, name, email FROM users WHERE id = ANY($1::uuid[])`,
+    [studentIds],
   );
   return rows;
 }
 
-async function feeDueReport(client = pool) {
+async function feeDueReport(filters = {}, client = pool) {
+  const { page, limit, offset } = parsePagination(filters);
+
+  const feeCondition = `e.deleted = FALSE
+        AND (e.total_fee - COALESCE(e.installment1_amount, 0) - COALESCE(e.installment2_amount, 0) - COALESCE(e.installment3_amount, 0)) > 0`;
+
+  const countResult = await client.query(
+    `SELECT COUNT(*)::int AS total FROM enrollments e WHERE ${feeCondition}`,
+  );
+  const total = countResult.rows[0].total;
+
   const { rows } = await client.query(
     `
       SELECT
@@ -126,13 +162,13 @@ async function feeDueReport(client = pool) {
         )::int AS "daysSinceLastPayment"
       FROM enrollments e
       JOIN users u ON e.student_id = u.id
-      WHERE e.deleted = FALSE
-        AND (e.total_fee - COALESCE(e.installment1_amount, 0) - COALESCE(e.installment2_amount, 0) - COALESCE(e.installment3_amount, 0)) > 0
+      WHERE ${feeCondition}
       ORDER BY "pendingAmount" DESC
+      LIMIT $1 OFFSET $2
     `,
-    [],
+    [limit, offset],
   );
-  return rows;
+  return paginatedResult(rows, total, page, limit);
 }
 
 async function enrollmentFigures(filters = {}, client = pool) {
@@ -165,6 +201,7 @@ async function enrollmentFigures(filters = {}, client = pool) {
 }
 
 async function placementNotContacted(filters = {}, client = pool) {
+  const { page, limit, offset } = parsePagination(filters);
   const values = [];
   const conditions = [
     "e.deleted = FALSE",
@@ -182,6 +219,17 @@ async function placementNotContacted(filters = {}, client = pool) {
     conditions.push(`e.start_date <= $${values.length}`);
   }
 
+  const whereClause = conditions.join(" AND ");
+  const countValues = [...values];
+
+  const countResult = await client.query(
+    `SELECT COUNT(*)::int AS total FROM enrollments e WHERE ${whereClause}`,
+    countValues,
+  );
+  const total = countResult.rows[0].total;
+
+  values.push(limit, offset);
+
   const { rows } = await client.query(
     `
       SELECT
@@ -195,15 +243,17 @@ async function placementNotContacted(filters = {}, client = pool) {
         e.contacted_date    AS "contactedDate"
       FROM enrollments e
       JOIN users u ON e.student_id = u.id
-      WHERE ${conditions.join(" AND ")}
+      WHERE ${whereClause}
       ORDER BY e.end_date ASC, u.name ASC
+      LIMIT $${values.length - 1} OFFSET $${values.length}
     `,
     values,
   );
-  return rows;
+  return paginatedResult(rows, total, page, limit);
 }
 
 async function placementContacted(filters = {}, client = pool) {
+  const { page, limit, offset } = parsePagination(filters);
   const values = [];
   const conditions = [
     "e.deleted = FALSE",
@@ -227,6 +277,17 @@ async function placementContacted(filters = {}, client = pool) {
     conditions.push(`e.placement_status = $${values.length}`);
   }
 
+  const whereClause = conditions.join(" AND ");
+  const countValues = [...values];
+
+  const countResult = await client.query(
+    `SELECT COUNT(*)::int AS total FROM enrollments e WHERE ${whereClause}`,
+    countValues,
+  );
+  const total = countResult.rows[0].total;
+
+  values.push(limit, offset);
+
   const { rows } = await client.query(
     `
       SELECT
@@ -240,12 +301,13 @@ async function placementContacted(filters = {}, client = pool) {
         e.contacted_date    AS "contactedDate"
       FROM enrollments e
       JOIN users u ON e.student_id = u.id
-      WHERE ${conditions.join(" AND ")}
+      WHERE ${whereClause}
       ORDER BY e.contacted_date DESC, u.name ASC
+      LIMIT $${values.length - 1} OFFSET $${values.length}
     `,
     values,
   );
-  return rows;
+  return paginatedResult(rows, total, page, limit);
 }
 
 async function updatePlacementContact(enrollmentId, data, client = pool) {

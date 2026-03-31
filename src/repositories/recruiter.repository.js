@@ -1,6 +1,8 @@
 import pool from "../config/db.js";
+import { parsePagination, paginatedResult } from '../validators/common.validator.js';
 
 async function findCandidates(filters = {}, recruiterId, client = pool) {
+  const { page, limit, offset } = parsePagination(filters);
   const values = [recruiterId];
   const conditions = ["u.role = 'STUDENT'", "u.is_approved = true"];
 
@@ -16,6 +18,21 @@ async function findCandidates(filters = {}, recruiterId, client = pool) {
     values.push(filters.minExperience);
     conditions.push(`sp.it_exp_years >= $${values.length}`);
   }
+
+  const whereClause = conditions.join(" AND ");
+  const countValues = [...values];
+
+  const countResult = await client.query(
+    `SELECT COUNT(*)::int AS total
+     FROM users u
+     JOIN student_profiles sp ON u.id = sp.user_id
+     JOIN enrollments e ON u.id = e.student_id
+     WHERE ${whereClause}`,
+    countValues,
+  );
+  const total = countResult.rows[0].total;
+
+  values.push(limit, offset);
 
   const { rows } = await client.query(
     `
@@ -34,13 +51,14 @@ async function findCandidates(filters = {}, recruiterId, client = pool) {
       LEFT JOIN cvs cv ON u.id = cv.student_id
       LEFT JOIN recruiter_shortlists rs
         ON rs.student_id = u.id AND rs.recruiter_id = $1 AND rs.course = e.course
-      WHERE ${conditions.join(" AND ")}
+      WHERE ${whereClause}
       ORDER BY u.created_at DESC
+      LIMIT $${values.length - 1} OFFSET $${values.length}
     `,
     values,
   );
 
-  return rows;
+  return { ...paginatedResult(rows, total, page, limit) };
 }
 
 async function countRecruiterDownloads(recruiterId, client = pool) {
@@ -112,7 +130,15 @@ async function bulkInsertShortlists(recruiterId, items, client = pool) {
   return rowCount;
 }
 
-async function getRecruiterShortlist(recruiterId, client = pool) {
+async function getRecruiterShortlist(recruiterId, filters = {}, client = pool) {
+  const { page, limit, offset } = parsePagination(filters);
+
+  const countResult = await client.query(
+    'SELECT COUNT(*)::int AS total FROM recruiter_shortlists WHERE recruiter_id = $1',
+    [recruiterId],
+  );
+  const total = countResult.rows[0].total;
+
   const { rows } = await client.query(
     `
       SELECT
@@ -128,13 +154,21 @@ async function getRecruiterShortlist(recruiterId, client = pool) {
       JOIN users ru ON rs.recruiter_id = ru.id
       WHERE rs.recruiter_id = $1
       ORDER BY COALESCE(rs.shortlisted_at, rs.created_at) DESC
+      LIMIT $2 OFFSET $3
     `,
-    [recruiterId],
+    [recruiterId, limit, offset],
   );
-  return rows;
+  return paginatedResult(rows, total, page, limit);
 }
 
-async function getAdminRecruiterShortlist(client = pool) {
+async function getAdminRecruiterShortlist(filters = {}, client = pool) {
+  const { page, limit, offset } = parsePagination(filters);
+
+  const countResult = await client.query(
+    'SELECT COUNT(*)::int AS total FROM recruiter_shortlists',
+  );
+  const total = countResult.rows[0].total;
+
   const { rows } = await client.query(
     `
       SELECT
@@ -149,9 +183,11 @@ async function getAdminRecruiterShortlist(client = pool) {
       JOIN users u  ON rs.student_id  = u.id
       JOIN users ru ON rs.recruiter_id = ru.id
       ORDER BY COALESCE(rs.shortlisted_at, rs.created_at) DESC
+      LIMIT $1 OFFSET $2
     `,
+    [limit, offset],
   );
-  return rows;
+  return paginatedResult(rows, total, page, limit);
 }
 
 async function getDistinctCities(client = pool) {
@@ -227,17 +263,26 @@ async function findById(id, client = pool) {
   return rows[0] || null;
 }
 
-async function listAllRecruiters(client = pool) {
+async function listAllRecruiters(filters = {}, client = pool) {
+  const { page, limit, offset } = parsePagination(filters);
+
+  const countResult = await client.query(
+    "SELECT COUNT(*)::int AS total FROM users WHERE role = 'RECRUITER'",
+  );
+  const total = countResult.rows[0].total;
+
   const { rows } = await client.query(
     `
-      SELECT u.id, u.name, u.email, u.phone, u.is_active, u.is_approved, u.created_at, rp.company_name, rp.designation 
+      SELECT u.id, u.name, u.email, u.phone, u.is_active, u.is_approved, u.created_at, rp.company_name, rp.designation
       FROM users u
       LEFT JOIN recruiter_profiles rp ON u.id = rp.user_id
       WHERE u.role = 'RECRUITER'
       ORDER BY u.created_at DESC
+      LIMIT $1 OFFSET $2
     `,
+    [limit, offset],
   );
-  return rows;
+  return paginatedResult(rows, total, page, limit);
 }
 
 async function updateRecruiter(id, payload, client = pool) {

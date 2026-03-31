@@ -8,10 +8,8 @@ import studentRoutes from "./student.role.routes.js";
 
 const router = express.Router();
 
-// Cache all GET requests for 30 seconds
-router.use(cacheMiddleware(30));
-
-router.use("/public", publicRoutes);
+// Only cache public (unauthenticated) GET routes
+router.use("/public", cacheMiddleware(60), publicRoutes);
 router.use("/student", studentRoutes);
 router.use("/recruiter", recruiterRoutes);
 router.use("/admin", adminRoutes);

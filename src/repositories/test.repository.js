@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { parsePagination, paginatedResult } from '../validators/common.validator.js';
 
 // ─── Test CRUD ───────────────────────────────────────────────
 
@@ -41,7 +42,12 @@ async function findById(id, client = pool) {
   return rows[0] || null;
 }
 
-async function findAllTests(client = pool) {
+async function findAllTests(filters = {}, client = pool) {
+  const { page, limit, offset } = parsePagination(filters);
+
+  const countResult = await client.query('SELECT COUNT(*)::int AS total FROM tests');
+  const total = countResult.rows[0].total;
+
   const { rows } = await client.query(
     `SELECT t.id, t.title, t.description, t.course,
             t.duration_minutes AS "durationMinutes",
@@ -54,9 +60,11 @@ async function findAllTests(client = pool) {
      FROM tests t
      LEFT JOIN questions q ON q.test_id = t.id
      GROUP BY t.id
-     ORDER BY t.created_at DESC`,
+     ORDER BY t.created_at DESC
+     LIMIT $1 OFFSET $2`,
+    [limit, offset],
   );
-  return rows;
+  return paginatedResult(rows, total, page, limit);
 }
 
 async function findPublishedTests(client = pool) {
@@ -346,7 +354,15 @@ async function findAnswersByAttemptId(attemptId, client = pool) {
   return rows;
 }
 
-async function findAttemptsByTestId(testId, client = pool) {
+async function findAttemptsByTestId(testId, filters = {}, client = pool) {
+  const { page, limit, offset } = parsePagination(filters);
+
+  const countResult = await client.query(
+    'SELECT COUNT(*)::int AS total FROM attempts WHERE test_id = $1',
+    [testId],
+  );
+  const total = countResult.rows[0].total;
+
   const { rows } = await client.query(
     `SELECT a.id, a.user_id AS "studentId", a.score,
             a.total_marks AS "totalMarks", a.status,
@@ -356,10 +372,11 @@ async function findAttemptsByTestId(testId, client = pool) {
      FROM attempts a
      JOIN users u ON a.user_id = u.id
      WHERE a.test_id = $1
-     ORDER BY a.submitted_at DESC NULLS LAST`,
-    [testId],
+     ORDER BY a.submitted_at DESC NULLS LAST
+     LIMIT $2 OFFSET $3`,
+    [testId, limit, offset],
   );
-  return rows;
+  return paginatedResult(rows, total, page, limit);
 }
 
 // ─── Evaluation Helpers ─────────────────────────────────────

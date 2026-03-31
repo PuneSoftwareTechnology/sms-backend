@@ -55,6 +55,14 @@ async function updatePhotoUrl(userId, photoUrl, client = pool) {
   return rows[0] || null;
 }
 
+async function findProfilePhotoKey(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT photo_url FROM student_profiles WHERE user_id = $1',
+    [userId],
+  );
+  return rows[0]?.photo_url || null;
+}
+
 async function findFullProfile(userId, client = pool) {
   const query = `
     SELECT
@@ -98,6 +106,15 @@ async function createProjectSubmission(studentId, fileUrl, client = pool) {
     [studentId, fileUrl],
   );
   return rows[0];
+}
+
+async function findProjectSubmissionsByStudentId(studentId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT id, file_url AS "fileUrl", created_at AS "createdAt"
+     FROM project_submissions WHERE student_id = $1 ORDER BY created_at DESC`,
+    [studentId],
+  );
+  return rows;
 }
 
 async function findCvByStudentId(studentId, client = pool) {
@@ -174,8 +191,10 @@ export {
   createEmptyProfile,
   updateProfile,
   updatePhotoUrl,
+  findProfilePhotoKey,
   findFullProfile,
   createProjectSubmission,
+  findProjectSubmissionsByStudentId,
   findCvByStudentId,
   upsertCv,
   findEvaluationsByStudentId,
@@ -186,8 +205,10 @@ export default {
   createEmptyProfile,
   updateProfile,
   updatePhotoUrl,
+  findProfilePhotoKey,
   findFullProfile,
   createProjectSubmission,
+  findProjectSubmissionsByStudentId,
   findCvByStudentId,
   upsertCv,
   findEvaluationsByStudentId,

@@ -10,10 +10,10 @@ async function sendSignupVerificationEmail({ to, name, token }) {
   await sesService.sendEmail({ to, subject, html });
 }
 
-async function sendPasswordResetEmail({ to, token }) {
-  const user = await userRepository.findByEmail(to);
+async function sendPasswordResetEmail({ to, token, name }) {
+  const userName = name || (await userRepository.findByEmail(to))?.name;
   const resetLink = `${env.frontendUrl}/reset-password?token=${token}`;
-  const { subject, html } = templates.passwordResetTemplate({ name: user?.name, resetLink });
+  const { subject, html } = templates.passwordResetTemplate({ name: userName, resetLink });
   await sesService.sendEmail({ to, subject, html });
 }
 
@@ -46,20 +46,20 @@ async function sendShortlistNotification({ recruiterId, studentId, course }) {
   await sesService.sendEmail({ to: student.email, subject, html });
 }
 
-async function sendPaymentReceiptEmail({ to, amount, receiptUrl }) {
-  const user = await userRepository.findByEmail(to);
+async function sendPaymentReceiptEmail({ to, amount, receiptUrl, name }) {
+  const userName = name || (await userRepository.findByEmail(to))?.name;
   const { subject, html } = templates.paymentReceiptTemplate({
-    name: user?.name,
+    name: userName,
     amount,
     receiptUrl,
   });
   await sesService.sendEmail({ to, subject, html });
 }
 
-async function sendCertificateEmail({ to, certificateUrl }) {
-  const user = await userRepository.findByEmail(to);
+async function sendCertificateEmail({ to, certificateUrl, name }) {
+  const userName = name || (await userRepository.findByEmail(to))?.name;
   const { subject, html } = templates.certificateTemplate({
-    name: user?.name,
+    name: userName,
     certificateUrl,
   });
   await sesService.sendEmail({ to, subject, html });
@@ -67,19 +67,28 @@ async function sendCertificateEmail({ to, certificateUrl }) {
 
 async function sendBulkCustomEmail({ recipients, subject, body }) {
   const results = { sent: 0, failed: 0 };
+  const BATCH_SIZE = 5;
 
-  for (const recipient of recipients) {
-    try {
-      const { html } = templates.bulkEmailTemplate({
-        subject,
-        body,
-        recipientName: recipient.name,
-      });
-      await sesService.sendEmail({ to: recipient.email, subject, html });
-      results.sent++;
-    } catch (err) {
-      results.failed++;
-      console.error(`[Email] Failed to send to ${recipient.email}:`, err.message);
+  for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
+    const batch = recipients.slice(i, i + BATCH_SIZE);
+    const settled = await Promise.allSettled(
+      batch.map((recipient) => {
+        const { html } = templates.bulkEmailTemplate({
+          subject,
+          body,
+          recipientName: recipient.name,
+        });
+        return sesService.sendEmail({ to: recipient.email, subject, html });
+      }),
+    );
+
+    for (let j = 0; j < settled.length; j++) {
+      if (settled[j].status === 'fulfilled') {
+        results.sent++;
+      } else {
+        results.failed++;
+        console.error(`[Email] Failed to send to ${batch[j].email}:`, settled[j].reason?.message);
+      }
     }
   }
 
