@@ -1,11 +1,20 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { Agent } from 'node:https';
 import env from '../config/env.js';
 
-function createS3Client() {
-  const config = { region: env.awsRegion };
+const isLambda = !!process.env.AWS_LAMBDA_FUNCTION_NAME;
 
-  if (env.awsAccessKeyId && env.awsSecretAccessKey) {
+function createS3Client() {
+  const config = {
+    region: env.awsRegion,
+    // Reuse TCP connections across invocations in warm Lambda containers
+    requestHandler: { httpsAgent: new Agent({ keepAlive: true }) },
+  };
+
+  // On Lambda, credentials come from IAM role automatically.
+  // Only use explicit keys for local development.
+  if (!isLambda && env.awsAccessKeyId && env.awsSecretAccessKey) {
     config.credentials = {
       accessKeyId: env.awsAccessKeyId,
       secretAccessKey: env.awsSecretAccessKey,

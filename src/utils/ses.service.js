@@ -1,10 +1,19 @@
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { Agent } from 'node:https';
 import env from '../config/env.js';
 
-function createSesClient() {
-  const config = { region: env.awsRegion };
+const isLambda = !!process.env.AWS_LAMBDA_FUNCTION_NAME;
 
-  if (env.awsAccessKeyId && env.awsSecretAccessKey) {
+function createSesClient() {
+  const config = {
+    region: env.awsRegion,
+    // Reuse TCP connections across invocations in warm Lambda containers
+    requestHandler: { httpsAgent: new Agent({ keepAlive: true }) },
+  };
+
+  // On Lambda, credentials come from IAM role automatically.
+  // Only use explicit keys for local development.
+  if (!isLambda && env.awsAccessKeyId && env.awsSecretAccessKey) {
     config.credentials = {
       accessKeyId: env.awsAccessKeyId,
       secretAccessKey: env.awsSecretAccessKey,

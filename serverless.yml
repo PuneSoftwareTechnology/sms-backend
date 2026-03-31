@@ -1,0 +1,73 @@
+service: sms-backend
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ap-south-1
+  stage: ${opt:stage, 'prod'}
+  memorySize: 512
+  timeout: 29
+  architecture: arm64
+  environment:
+    NODE_ENV: production
+    DATABASE_URL: ${env:DATABASE_URL}
+    JWT_SECRET: ${env:JWT_SECRET}
+    JWT_EXPIRES_IN: ${env:JWT_EXPIRES_IN, '30d'}
+    CORS_ORIGIN: ${env:CORS_ORIGIN, '*'}
+    FRONTEND_URL: ${env:FRONTEND_URL, ''}
+    S3_BUCKET: ${env:S3_BUCKET}
+    S3_SIGNED_URL_EXPIRY_SECONDS: ${env:S3_SIGNED_URL_EXPIRY_SECONDS, '300'}
+    SES_FROM_EMAIL: ${env:SES_FROM_EMAIL, ''}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+            - s3:DeleteObject
+          Resource: arn:aws:s3:::${env:S3_BUCKET}/*
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+            - ses:SendRawEmail
+          Resource: '*'
+
+package:
+  individually: true
+  patterns:
+    - '!**'
+
+functions:
+  api:
+    handler: dist/lambda.handler
+    description: SMS Backend API
+    package:
+      patterns:
+        - dist/lambda.mjs
+        - dist/lambda.mjs.map
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+      - httpApi:
+          path: /
+          method: ANY
+    provisionedConcurrency: ${env:PROVISIONED_CONCURRENCY, null}
+
+  cron:
+    handler: dist/cron.deactivateInactiveRecruiters
+    description: Daily recruiter deactivation
+    memorySize: 256
+    timeout: 60
+    package:
+      patterns:
+        - dist/cron.mjs
+        - dist/cron.mjs.map
+    events:
+      - schedule:
+          rate: cron(30 1 * * ? *)
+          enabled: true
+
+plugins:
+  - serverless-plugin-common-excludes

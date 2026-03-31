@@ -1,6 +1,9 @@
 import dotenv from "dotenv";
 
-dotenv.config();
+// On Lambda, env vars are set via function configuration — skip .env file loading
+if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  dotenv.config();
+}
 
 const required = ["DATABASE_URL", "JWT_SECRET"];
 for (const key of required) {
