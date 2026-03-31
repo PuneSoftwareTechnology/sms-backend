@@ -26,11 +26,17 @@ const qrIdParamSchema = z.object({
 
 const evaluationIdParamSchema = z.object({
   body: z.object({
-    communicationScore: z.number().min(0).max(10),
-  }),
+    communicationScore: z.number().min(0).max(10).optional(),
+    scopeForImprovement: z.string().optional(),
+    trainerRemark: z.string().optional(),
+  }).refine(
+    (data) => data.communicationScore !== undefined || data.scopeForImprovement !== undefined || data.trainerRemark !== undefined,
+    { message: "At least one field (communicationScore, scopeForImprovement, trainerRemark) is required" },
+  ),
   params: z.object({ evaluationId: z.string().uuid() }),
   query: z.object({}).optional(),
 });
+
 
 const paginationQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional(),

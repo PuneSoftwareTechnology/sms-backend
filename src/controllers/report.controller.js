@@ -1,5 +1,7 @@
+import archiver from 'archiver';
 import reportService from '../services/report.service.js';
 import emailService from '../services/email.service.js';
+import s3Service from '../utils/s3.service.js';
 import { ok } from '../utils/apiResponse.js';
 
 async function candidateFilter(req, res) {
@@ -22,8 +24,29 @@ async function downloadBulkCvs(req, res) {
   if (!studentIds?.length) {
     return res.status(400).json({ success: false, message: 'No student IDs provided' });
   }
-  const cvs = await reportService.getCvsForDownload(studentIds);
-  return ok(res, cvs, 'CV URLs fetched');
+  const cvs = await reportService.getCvKeysForDownload(studentIds);
+  if (!cvs.length) {
+    return res.status(404).json({ success: false, message: 'No CVs found for selected candidates' });
+  }
+
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', 'attachment; filename="CVs.zip"');
+
+  const archive = archiver('zip', { zlib: { level: 5 } });
+  archive.pipe(res);
+
+  for (const cv of cvs) {
+    try {
+      const stream = await s3Service.getObjectStream(cv.fileKey);
+      const ext = cv.fileKey.split('.').pop() || 'pdf';
+      const fileName = `${cv.name.replace(/\s+/g, '_')}_${cv.course.replace(/\s+/g, '_')}.${ext}`;
+      archive.append(stream, { name: fileName });
+    } catch {
+      // Skip CVs that can't be fetched from S3
+    }
+  }
+
+  await archive.finalize();
 }
 
 async function sendBulkEmail(req, res) {

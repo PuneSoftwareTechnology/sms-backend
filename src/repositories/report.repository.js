@@ -144,6 +144,21 @@ async function getCvsByStudentIds(studentIds, client = pool) {
   return rows;
 }
 
+async function getCvKeysByStudentIds(studentIds, client = pool) {
+  if (!studentIds.length) return [];
+  const { rows } = await client.query(
+    `
+      SELECT cv.file_url AS "fileKey", u.name, e.course
+      FROM cvs cv
+      JOIN users u ON cv.student_id = u.id
+      LEFT JOIN enrollments e ON cv.student_id = e.student_id AND e.deleted = FALSE
+      WHERE cv.student_id = ANY($1::uuid[])
+    `,
+    [studentIds],
+  );
+  return rows;
+}
+
 async function getStudentEmails(studentIds, client = pool) {
   if (!studentIds.length) return [];
   const { rows } = await client.query(
@@ -348,6 +363,6 @@ async function updatePlacementContact(enrollmentId, data, client = pool) {
   return rows[0];
 }
 
-export { candidateFilterReport, feeDueReport, enrollmentFigures, placementNotContacted, placementContacted, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsByStudentIds, getStudentEmails };
+export { candidateFilterReport, feeDueReport, enrollmentFigures, placementNotContacted, placementContacted, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsByStudentIds, getCvKeysByStudentIds, getStudentEmails };
 
-export default { candidateFilterReport, feeDueReport, enrollmentFigures, placementNotContacted, placementContacted, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsByStudentIds, getStudentEmails };
+export default { candidateFilterReport, feeDueReport, enrollmentFigures, placementNotContacted, placementContacted, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsByStudentIds, getCvKeysByStudentIds, getStudentEmails };

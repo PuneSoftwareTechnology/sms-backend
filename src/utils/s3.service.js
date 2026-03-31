@@ -71,6 +71,16 @@ async function deleteObject(key) {
   }));
 }
 
+async function getObjectStream(key) {
+  ensureBucketConfigured();
+  const command = new GetObjectCommand({
+    Bucket: env.s3Bucket,
+    Key: key,
+  });
+  const response = await s3.send(command);
+  return response.Body;
+}
+
 async function getSignedUploadUrl(key, contentType = 'application/octet-stream', expiresInSeconds = 300) {
   ensureBucketConfigured();
 
@@ -109,6 +119,6 @@ async function resolvePresignedUrlsInArray(items, fields) {
   return Promise.all(items.map((item) => resolvePresignedUrls(item, fields)));
 }
 
-export { uploadBuffer, getSignedUploadUrl, getSignedDownloadUrl, deleteObject, resolvePresignedUrl, resolvePresignedUrls, resolvePresignedUrlsInArray };
+export { uploadBuffer, getSignedUploadUrl, getSignedDownloadUrl, deleteObject, getObjectStream, resolvePresignedUrl, resolvePresignedUrls, resolvePresignedUrlsInArray };
 
-export default { uploadBuffer, getSignedUploadUrl, getSignedDownloadUrl, deleteObject, resolvePresignedUrl, resolvePresignedUrls, resolvePresignedUrlsInArray };
+export default { uploadBuffer, getSignedUploadUrl, getSignedDownloadUrl, deleteObject, getObjectStream, resolvePresignedUrl, resolvePresignedUrls, resolvePresignedUrlsInArray };

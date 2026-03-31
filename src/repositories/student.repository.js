@@ -137,10 +137,36 @@ async function upsertCv(studentId, fileUrl, client = pool) {
 }
 
 async function updateCommunicationScore(evaluationId, communicationScore, client = pool) {
+  return updateEvaluation(evaluationId, { communicationScore }, client);
+}
+
+async function updateEvaluation(evaluationId, data, client = pool) {
+  const fields = [];
+  const values = [];
+  let idx = 1;
+
+  if (data.communicationScore !== undefined) {
+    fields.push(`communication_score = $${idx++}`);
+    values.push(data.communicationScore);
+  }
+  if (data.scopeForImprovement !== undefined) {
+    fields.push(`scope_for_improvement = $${idx++}`);
+    values.push(data.scopeForImprovement);
+  }
+  if (data.trainerRemark !== undefined) {
+    fields.push(`trainer_remark = $${idx++}`);
+    values.push(data.trainerRemark);
+  }
+
+  if (fields.length === 0) return null;
+
+  fields.push('updated_at = NOW()');
+  values.push(evaluationId);
+
   const { rows } = await client.query(
     `UPDATE evaluations
-     SET communication_score = $1, updated_at = NOW()
-     WHERE id = $2
+     SET ${fields.join(', ')}
+     WHERE id = $${idx}
      RETURNING
        id,
        enrollment_id    AS "enrollmentId",
@@ -150,7 +176,7 @@ async function updateCommunicationScore(evaluationId, communicationScore, client
        scope_for_improvement AS "scopeForImprovement",
        trainer_remark    AS "trainerRemark",
        updated_at        AS "updatedAt"`,
-    [communicationScore, evaluationId],
+    values,
   );
   return rows[0] || null;
 }
@@ -199,6 +225,7 @@ export {
   upsertCv,
   findEvaluationsByStudentId,
   updateCommunicationScore,
+  updateEvaluation,
 };
 
 export default {
@@ -213,4 +240,5 @@ export default {
   upsertCv,
   findEvaluationsByStudentId,
   updateCommunicationScore,
+  updateEvaluation,
 };

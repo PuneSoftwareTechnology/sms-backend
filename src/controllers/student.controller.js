@@ -42,11 +42,12 @@ async function uploadCv(req, res) {
 }
 
 async function updateCommunicationScore(req, res) {
-  const updated = await studentService.updateCommunicationScore(
+  const { communicationScore, scopeForImprovement, trainerRemark } = req.body;
+  const updated = await studentService.updateEvaluation(
     req.params.evaluationId,
-    req.body.communicationScore,
+    { communicationScore, scopeForImprovement, trainerRemark },
   );
-  return ok(res, updated, 'Communication score updated');
+  return ok(res, updated, 'Evaluation updated');
 }
 
 async function uploadCertificate(req, res) {

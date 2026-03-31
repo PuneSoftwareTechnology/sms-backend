@@ -302,11 +302,17 @@ async function getMyFullProfile(studentId) {
 }
 
 async function updateCommunicationScore(evaluationId, communicationScore) {
-  if (communicationScore < 0 || communicationScore > 10) {
-    throw new ApiError(400, "Communication score must be between 0 and 10");
+  return updateEvaluation(evaluationId, { communicationScore });
+}
+
+async function updateEvaluation(evaluationId, data) {
+  if (data.communicationScore !== undefined) {
+    if (data.communicationScore < 0 || data.communicationScore > 10) {
+      throw new ApiError(400, "Communication score must be between 0 and 10");
+    }
   }
 
-  const updated = await studentRepository.updateCommunicationScore(evaluationId, communicationScore);
+  const updated = await studentRepository.updateEvaluation(evaluationId, data);
   if (!updated) {
     throw new ApiError(404, "Evaluation not found");
   }
@@ -373,6 +379,7 @@ export {
   uploadCv,
   uploadCertificate,
   updateCommunicationScore,
+  updateEvaluation,
   getUploadUrl,
   confirmUpload,
 };
@@ -388,6 +395,7 @@ export default {
   uploadCv,
   uploadCertificate,
   updateCommunicationScore,
+  updateEvaluation,
   getUploadUrl,
   confirmUpload,
 };

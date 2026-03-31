@@ -27,6 +27,11 @@ async function getCvsForDownload(studentIds) {
   return s3Service.resolvePresignedUrlsInArray(cvs, ['fileUrl']);
 }
 
+async function getCvKeysForDownload(studentIds) {
+  // Returns raw S3 keys (fileKey) — no pre-signed URL resolution
+  return reportRepository.getCvKeysByStudentIds(studentIds);
+}
+
 async function getStudentEmails(studentIds) {
   return reportRepository.getStudentEmails(studentIds);
 }
@@ -69,6 +74,6 @@ async function updatePlacementContact(enrollmentId, data) {
   return reportRepository.updatePlacementContact(enrollmentId, data);
 }
 
-export { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsForDownload, getStudentEmails };
+export { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsForDownload, getCvKeysForDownload, getStudentEmails };
 
-export default { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsForDownload, getStudentEmails };
+export default { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsForDownload, getCvKeysForDownload, getStudentEmails };
