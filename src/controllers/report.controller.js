@@ -45,6 +45,16 @@ async function addBulkComment(req, res) {
   return ok(res, null, 'Comment added successfully');
 }
 
+async function updateCandidateRemark(req, res) {
+  const { enrollmentId } = req.params;
+  const { studentId, remark } = req.body;
+  if (!enrollmentId || !studentId) {
+    return res.status(400).json({ success: false, message: 'enrollmentId and studentId are required' });
+  }
+  const result = await reportService.updateCandidateRemark(enrollmentId, studentId, remark || '');
+  return ok(res, result, 'Remark updated successfully');
+}
+
 async function feeDue(req, res) {
   const rows = await reportService.feeDue(req.query);
   return ok(res, rows, 'Fee due report fetched');
@@ -84,6 +94,6 @@ async function updatePlacementContact(req, res) {
   return ok(res, result, 'Placement contact updated');
 }
 
-export { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact, downloadBulkCvs, sendBulkEmail, addBulkComment };
+export { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact, downloadBulkCvs, sendBulkEmail, addBulkComment, updateCandidateRemark };
 
-export default { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact, downloadBulkCvs, sendBulkEmail, addBulkComment };
+export default { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact, downloadBulkCvs, sendBulkEmail, addBulkComment, updateCandidateRemark };

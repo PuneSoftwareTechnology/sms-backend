@@ -18,6 +18,10 @@ async function addBulkComment(studentIds, comment, addedBy) {
   await reportRepository.addBulkComment(studentIds, comment, addedBy);
 }
 
+async function updateCandidateRemark(enrollmentId, studentId, remark) {
+  return reportRepository.updateCandidateRemark(enrollmentId, studentId, remark);
+}
+
 async function getCvsForDownload(studentIds) {
   const cvs = await reportRepository.getCvsByStudentIds(studentIds);
   return s3Service.resolvePresignedUrlsInArray(cvs, ['fileUrl']);
@@ -65,6 +69,6 @@ async function updatePlacementContact(enrollmentId, data) {
   return reportRepository.updatePlacementContact(enrollmentId, data);
 }
 
-export { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact, addBulkComment, getCvsForDownload, getStudentEmails };
+export { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsForDownload, getStudentEmails };
 
-export default { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact, addBulkComment, getCvsForDownload, getStudentEmails };
+export default { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsForDownload, getStudentEmails };

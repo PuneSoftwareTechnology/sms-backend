@@ -143,6 +143,12 @@ async function updateEnrollment(id, payload, client = pool) {
     }
   }
 
+  // Auto-set contacted_date when placement is marked as PLACED so the student
+  // appears in the "Contacted" tab of the Placement Report.
+  if (payload.placement_status === "PLACED" && !payload.contacted_date) {
+    fields.push("contacted_date = CURRENT_DATE");
+  }
+
   if (fields.length === 0) return null;
 
   fields.push("updated_at = NOW()");

@@ -201,6 +201,10 @@ router.post(
   "/reports/candidates/add-comment",
   asyncHandler(reportController.addBulkComment),
 );
+router.put(
+  "/reports/candidates/:enrollmentId/remark",
+  asyncHandler(reportController.updateCandidateRemark),
+);
 router.get(
   "/reports/fee-dues",
   validate(feeDueSchema),

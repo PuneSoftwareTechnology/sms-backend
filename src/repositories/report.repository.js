@@ -66,18 +66,22 @@ async function candidateFilterReport(filters = {}, client = pool) {
         u.id,
         u.name,
         e.course,
+        e.id                                         AS "enrollmentId",
         sp.city,
         COALESCE(sp.it_exp_years, 0)::int           AS "itExperienceYears",
         COALESCE(ts.marks_scored, 0)::int            AS "technicalMarksScored",
         COALESCE(ts.total_marks, 0)::int             AS "technicalTotalMarks",
         COALESCE(ev.communication_score, 0)::numeric AS "communicationScore",
-        ev.trainer_remark                            AS "remarks",
+        COALESCE(ev.trainer_remark, cc.comment)      AS "remarks",
         cv.file_url                                  AS "cvUrl"
       FROM users u
       JOIN student_profiles sp ON u.id = sp.user_id
       JOIN enrollments e ON u.id = e.student_id AND e.deleted = FALSE
       LEFT JOIN evaluations ev ON ev.enrollment_id = e.id
       LEFT JOIN cvs cv ON u.id = cv.student_id
+      LEFT JOIN LATERAL (
+        SELECT comment FROM candidate_comments WHERE student_id = u.id ORDER BY created_at DESC LIMIT 1
+      ) cc ON true
       LEFT JOIN (
         SELECT a.user_id, t.course,
                SUM(a.score)::int       AS marks_scored,
@@ -108,6 +112,21 @@ async function addBulkComment(studentIds, comment, addedBy, client = pool) {
     `INSERT INTO candidate_comments (student_id, comment, added_by) VALUES ${placeholders}`,
     values,
   );
+}
+
+async function updateCandidateRemark(enrollmentId, studentId, remark, client = pool) {
+  // Try update first, insert if no evaluation exists
+  const { rowCount, rows } = await client.query(
+    `UPDATE evaluations SET trainer_remark = $1 WHERE enrollment_id = $2 RETURNING trainer_remark AS "remarks"`,
+    [remark, enrollmentId],
+  );
+  if (rowCount > 0) return rows[0];
+
+  const result = await client.query(
+    `INSERT INTO evaluations (enrollment_id, student_id, trainer_remark) VALUES ($1, $2, $3) RETURNING trainer_remark AS "remarks"`,
+    [enrollmentId, studentId, remark],
+  );
+  return result.rows[0];
 }
 
 async function getCvsByStudentIds(studentIds, client = pool) {
@@ -329,6 +348,6 @@ async function updatePlacementContact(enrollmentId, data, client = pool) {
   return rows[0];
 }
 
-export { candidateFilterReport, feeDueReport, enrollmentFigures, placementNotContacted, placementContacted, updatePlacementContact, addBulkComment, getCvsByStudentIds, getStudentEmails };
+export { candidateFilterReport, feeDueReport, enrollmentFigures, placementNotContacted, placementContacted, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsByStudentIds, getStudentEmails };
 
-export default { candidateFilterReport, feeDueReport, enrollmentFigures, placementNotContacted, placementContacted, updatePlacementContact, addBulkComment, getCvsByStudentIds, getStudentEmails };
+export default { candidateFilterReport, feeDueReport, enrollmentFigures, placementNotContacted, placementContacted, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsByStudentIds, getStudentEmails };
