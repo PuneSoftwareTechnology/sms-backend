@@ -1,6 +1,7 @@
 import enrollmentService from "../services/enrollment.service.js";
 import enrollmentRepository from "../repositories/enrollment.repository.js";
 import emailService from "../services/email.service.js";
+import generateReceiptPdf, { generateReceiptHtml } from "../utils/receiptPdf.js";
 import ApiError from "../utils/apiError.js";
 import { ok } from "../utils/apiResponse.js";
 
@@ -63,16 +64,39 @@ async function sendReceipt(req, res) {
 
   const num = parseInt(installmentId, 10);
   const amount = enrollment[`installment${num}_amount`];
+  const date = enrollment[`installment${num}_date`];
+  const mode = enrollment[`installment${num}_mode`];
   if (!amount) throw new ApiError(400, `Installment ${num} has no payment recorded`);
 
-  const { receiptPdf } = req.body || {};
+  // Calculate total paid across all installments
+  const totalPaid = [1, 2, 3].reduce(
+    (sum, i) => sum + (Number(enrollment[`installment${i}_amount`]) || 0),
+    0,
+  );
+
+  const receiptData = {
+    enrollmentId,
+    studentName: enrollment.name,
+    courseName: enrollment.course,
+    institute: enrollment.institute,
+    totalFee: Number(enrollment.total_fee),
+    amountReceived: Number(amount),
+    pendingAmount: Number(enrollment.total_fee) - totalPaid,
+    installmentDate: date,
+    paymentMode: mode,
+  };
+
+  const [receiptPdf, receiptHtml] = await Promise.all([
+    generateReceiptPdf(receiptData),
+    Promise.resolve(generateReceiptHtml(receiptData)),
+  ]);
 
   await emailService.sendPaymentReceiptEmail({
     to: enrollment.email,
     amount,
-    receiptUrl: null,
     name: enrollment.name,
-    receiptPdf: receiptPdf || null,
+    receiptPdf,
+    receiptHtml,
   });
 
   return ok(res, null, "Receipt sent successfully");

@@ -6,6 +6,7 @@ import studentRepository from "../repositories/student.repository.js";
 import enrollmentRepository from "../repositories/enrollment.repository.js";
 import paymentRepository from "../repositories/payment.repository.js";
 import s3Service from "../utils/s3.service.js";
+import cvTemplateService from "./cvTemplate.service.js";
 
 async function resolveProfileUrls(profile) {
   return s3Service.resolvePresignedUrls(profile, ['profilePhoto']);
@@ -295,7 +296,9 @@ async function getMyFullProfile(studentId) {
     payments: paymentSummary,
     evaluations,
     projectSubmissions: resolvedProjects,
-    cvTemplates: [],
+    cvTemplates: enrollment
+      ? await cvTemplateService.listByCourses([enrollment.course])
+      : [],
     cv: cv ? { url: cvUrl } : null,
   };
 }

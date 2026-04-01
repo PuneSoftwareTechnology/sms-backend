@@ -40,26 +40,29 @@ async function sendShortlistNotification({ recruiterId, studentId, course }) {
   await sesService.sendEmail({ to: student.email, subject, html });
 }
 
-async function sendPaymentReceiptEmail({ to, amount, receiptUrl, name, receiptPdf }) {
+async function sendPaymentReceiptEmail({ to, amount, receiptUrl, name, receiptPdf, receiptHtml }) {
   const userName = name || (await userRepository.findByEmail(to))?.name;
-  const { subject, html } = templates.paymentReceiptTemplate({
+
+  // Use the full receipt HTML as email body when provided, otherwise fall back to basic template
+  const emailHtml = receiptHtml || templates.paymentReceiptTemplate({
     name: userName,
     amount,
     receiptUrl,
-  });
+  }).html;
+  const subject = 'Payment Confirmation';
 
   if (receiptPdf) {
     await sesService.sendEmailWithAttachment({
       to,
       subject,
-      html,
+      html: emailHtml,
       attachment: {
         content: receiptPdf,
         filename: `Payment_Receipt_${(userName || 'Student').replace(/\s+/g, '_')}.pdf`,
       },
     });
   } else {
-    await sesService.sendEmail({ to, subject, html });
+    await sesService.sendEmail({ to, subject, html: emailHtml });
   }
 }
 

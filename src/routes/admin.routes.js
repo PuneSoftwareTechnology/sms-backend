@@ -12,6 +12,7 @@ import enquiryController from "../controllers/enquiry.controller.js";
 import reportController from "../controllers/report.controller.js";
 import dashboardController from "../controllers/dashboard.controller.js";
 import qrController from "../controllers/qr.controller.js";
+import cvTemplateController from "../controllers/cvTemplate.controller.js";
 import { updateBatchEndDateSchema, updateEnrollmentSchema } from "../validators/enrollment.validator.js";
 import { createPaymentSchema } from "../validators/payment.validator.js";
 import {
@@ -31,6 +32,8 @@ import {
   feeDueSchema,
 } from "../validators/report.validator.js";
 import { dashboardStatsSchema } from "../validators/dashboard.validator.js";
+import { uploadTemplateSchema } from "../validators/cvTemplate.validator.js";
+import { docxUpload } from "../middlewares/upload.middleware.js";
 import {
   uuidIdParamSchema,
   userIdParamSchema,
@@ -233,5 +236,19 @@ router.put(
 );
 
 router.get("/qr-codes", asyncHandler(qrController.listQr));
+
+// ─── CV / Resume Templates ─────────────────────────────────────
+router.get("/cv-templates", asyncHandler(cvTemplateController.listTemplates));
+router.post(
+  "/cv-templates",
+  docxUpload.single("file"),
+  validate(uploadTemplateSchema),
+  asyncHandler(cvTemplateController.uploadTemplate),
+);
+router.delete(
+  "/cv-templates/:id",
+  validate(uuidIdParamSchema),
+  asyncHandler(cvTemplateController.deleteTemplate),
+);
 
 export default router;

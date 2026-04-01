@@ -62,5 +62,19 @@ const certificateUpload = multer({
   },
 });
 
-export { imageUpload, certificateUpload };
+const docxUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+  },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      cb(new ApiError(400, 'Only DOCX files are allowed'));
+      return;
+    }
+    cb(null, true);
+  },
+});
+
+export { imageUpload, certificateUpload, docxUpload };
 export default upload;

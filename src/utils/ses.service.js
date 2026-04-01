@@ -82,6 +82,9 @@ async function sendEmailWithAttachment({ to, subject, html, attachment }) {
   const boundary = `----=_Part_${Date.now()}`;
   const fileName = attachment.filename || 'receipt.pdf';
 
+  // Wrap base64 content at 76 characters per line (RFC 2045)
+  const wrappedContent = attachment.content.replace(/(.{76})/g, '$1\r\n');
+
   const rawMessage = [
     `From: ${env.sesFromEmail}`,
     `To: ${toAddress}`,
@@ -100,7 +103,7 @@ async function sendEmailWithAttachment({ to, subject, html, attachment }) {
     'Content-Transfer-Encoding: base64',
     `Content-Disposition: attachment; filename="${fileName}"`,
     '',
-    attachment.content,
+    wrappedContent,
     '',
     `--${boundary}--`,
   ].join('\r\n');

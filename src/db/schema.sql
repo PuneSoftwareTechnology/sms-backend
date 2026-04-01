@@ -347,3 +347,21 @@ CREATE INDEX IF NOT EXISTS idx_tests_published_course ON tests(is_published, cou
 CREATE INDEX IF NOT EXISTS idx_questions_test_id ON questions(test_id);
 CREATE INDEX IF NOT EXISTS idx_enrollments_placement_not_contacted ON enrollments(end_date, deleted) WHERE deleted = FALSE AND contacted_date IS NULL;
 CREATE INDEX IF NOT EXISTS idx_enrollments_placement_contacted ON enrollments(contacted_date DESC, deleted) WHERE deleted = FALSE AND contacted_date IS NOT NULL;
+
+-- ─── CV / Resume Templates ─────────────────────────────────────
+CREATE TABLE IF NOT EXISTS cv_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  course TEXT NOT NULL,
+  experience_level TEXT NOT NULL CHECK (experience_level IN ('FRESHER', 'EXPERIENCED')),
+  file_url TEXT NOT NULL,
+  original_filename TEXT NOT NULL,
+  uploaded_by UUID NOT NULL REFERENCES users(id),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_cv_templates_course ON cv_templates(course);
+
+DROP TRIGGER IF EXISTS trg_cv_templates_updated_at ON cv_templates;
+CREATE TRIGGER trg_cv_templates_updated_at BEFORE UPDATE ON cv_templates FOR EACH ROW EXECUTE FUNCTION set_updated_at();
