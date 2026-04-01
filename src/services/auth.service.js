@@ -35,31 +35,6 @@ async function login(email, password) {
   };
 }
 
-async function verifyEmail(token) {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    const row = await authTokenRepository.findValidEmailVerification(
-      token,
-      client,
-    );
-    if (!row) {
-      throw new ApiError(400, "Invalid or expired verification token");
-    }
-
-    const user = await userRepository.setEmailVerified(row.user_id, client);
-    await authTokenRepository.markEmailVerificationUsed(row.id, client);
-
-    await client.query("COMMIT");
-    return user;
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-  }
-}
-
 async function forgotPassword(email) {
   const user = await userRepository.findByEmail(email);
   if (!user) {
@@ -70,7 +45,8 @@ async function forgotPassword(email) {
   const expiresAt = new Date(Date.now() + 1000 * 60 * 30);
   await authTokenRepository.createPasswordReset(user.id, token, expiresAt);
 
-  await emailService.sendPasswordResetEmail({ to: user.email, token, name: user.name });
+  emailService.sendPasswordResetEmail({ to: user.email, token, name: user.name })
+    .catch((err) => console.error('[Email] Password reset email failed:', err.message));
 
   return { sent: true };
 }
@@ -111,6 +87,6 @@ async function logout(token) {
   return { loggedOut: true };
 }
 
-export { login, verifyEmail, forgotPassword, resetPassword, logout };
+export { login, forgotPassword, resetPassword, logout };
 
-export default { login, verifyEmail, forgotPassword, resetPassword, logout };
+export default { login, forgotPassword, resetPassword, logout };

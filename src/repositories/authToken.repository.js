@@ -1,37 +1,5 @@
 import pool from '../config/db.js';
 
-async function createEmailVerification(userId, token, expiresAt, client = pool) {
-  const { rows } = await client.query(
-    `
-      INSERT INTO email_verifications (user_id, token, expires_at)
-      VALUES ($1, $2, $3)
-      RETURNING *
-    `,
-    [userId, token, expiresAt],
-  );
-  return rows[0];
-}
-
-async function findValidEmailVerification(token, client = pool) {
-  const { rows } = await client.query(
-    `
-      SELECT *
-      FROM email_verifications
-      WHERE token = $1
-        AND used = false
-        AND expires_at > NOW()
-      ORDER BY created_at DESC
-      LIMIT 1
-    `,
-    [token],
-  );
-  return rows[0] || null;
-}
-
-async function markEmailVerificationUsed(id, client = pool) {
-  await client.query('UPDATE email_verifications SET used = true WHERE id = $1', [id]);
-}
-
 async function createPasswordReset(userId, token, expiresAt, client = pool) {
   const { rows } = await client.query(
     `
@@ -90,9 +58,6 @@ async function isTokenBlacklisted(token, client = pool) {
 }
 
 export {
-  createEmailVerification,
-  findValidEmailVerification,
-  markEmailVerificationUsed,
   createPasswordReset,
   findValidPasswordReset,
   markPasswordResetUsed,
@@ -101,9 +66,6 @@ export {
 };
 
 export default {
-  createEmailVerification,
-  findValidEmailVerification,
-  markEmailVerificationUsed,
   createPasswordReset,
   findValidPasswordReset,
   markPasswordResetUsed,

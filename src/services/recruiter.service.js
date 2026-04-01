@@ -64,7 +64,8 @@ async function shortlistCandidate(payload) {
   }
 
   const row = await recruiterRepository.insertShortlist(payload);
-  await emailService.sendShortlistNotification(payload);
+  emailService.sendShortlistNotification(payload)
+    .catch((err) => console.error('[Email] Shortlist notification failed:', err.message));
   return row;
 }
 
@@ -91,6 +92,14 @@ async function bulkRemoveShortlist(recruiterId, studentIds) {
 
 async function bulkShortlist(recruiterId, items) {
   const shortlisted = await recruiterRepository.bulkInsertShortlists(recruiterId, items);
+
+  // Send shortlist notifications in the background (fire-and-forget)
+  for (const item of items) {
+    emailService
+      .sendShortlistNotification({ recruiterId, studentId: item.studentId, course: item.course })
+      .catch((err) => console.error(`[Email] Bulk shortlist notification failed for ${item.studentId}:`, err.message));
+  }
+
   return { shortlisted, skipped: items.length - shortlisted };
 }
 

@@ -65,11 +65,14 @@ async function sendReceipt(req, res) {
   const amount = enrollment[`installment${num}_amount`];
   if (!amount) throw new ApiError(400, `Installment ${num} has no payment recorded`);
 
+  const { receiptPdf } = req.body || {};
+
   await emailService.sendPaymentReceiptEmail({
     to: enrollment.email,
     amount,
     receiptUrl: null,
     name: enrollment.name,
+    receiptPdf: receiptPdf || null,
   });
 
   return ok(res, null, "Receipt sent successfully");

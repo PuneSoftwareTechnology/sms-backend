@@ -9,12 +9,6 @@ const loginSchema = z.object({
   query: z.object({}).optional(),
 });
 
-const verifyEmailSchema = z.object({
-  body: z.object({ token: z.string().min(10) }),
-  params: z.object({}).optional(),
-  query: z.object({}).optional(),
-});
-
 const forgotPasswordSchema = z.object({
   body: z.object({ email: z.string().email() }),
   params: z.object({}).optional(),
@@ -29,13 +23,11 @@ const resetPasswordSchema = z.object({
 
 export {
   loginSchema,
-  verifyEmailSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
 };
 export default {
   loginSchema,
-  verifyEmailSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
 };

@@ -37,22 +37,6 @@ function baseLayout(content) {
 </html>`;
 }
 
-function signupVerificationTemplate({ name, verificationLink }) {
-  return {
-    subject: 'Verify Your Email Address',
-    html: baseLayout(`
-      <h2>Welcome, ${name}!</h2>
-      <p>Thank you for signing up. Please verify your email address to activate your account.</p>
-      <p style="text-align: center; margin: 24px 0;">
-        <a href="${verificationLink}" class="btn">Verify Email</a>
-      </p>
-      <p>If the button doesn't work, copy and paste this link into your browser:</p>
-      <p style="word-break: break-all; color: #6b7280; font-size: 13px;">${verificationLink}</p>
-      <p>This link expires in 24 hours.</p>
-    `),
-  };
-}
-
 function passwordResetTemplate({ name, resetLink }) {
   return {
     subject: 'Reset Your Password',
@@ -141,7 +125,6 @@ function bulkEmailTemplate({ subject, body, recipientName }) {
 }
 
 export {
-  signupVerificationTemplate,
   passwordResetTemplate,
   paymentReceiptTemplate,
   cvDownloadNotificationTemplate,
@@ -151,7 +134,6 @@ export {
 };
 
 export default {
-  signupVerificationTemplate,
   passwordResetTemplate,
   paymentReceiptTemplate,
   cvDownloadNotificationTemplate,

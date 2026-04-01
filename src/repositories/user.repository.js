@@ -46,14 +46,6 @@ async function updateLastLogin(id, client = pool) {
   await client.query("UPDATE users SET last_login = NOW() WHERE id = $1", [id]);
 }
 
-async function setEmailVerified(id, client = pool) {
-  const { rows } = await client.query(
-    "UPDATE users SET is_email_verified = true, updated_at = NOW() WHERE id = $1 RETURNING id, email, is_email_verified",
-    [id],
-  );
-  return rows[0] || null;
-}
-
 async function updatePasswordHash(id, passwordHash, client = pool) {
   await client.query(
     "UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2",
@@ -118,7 +110,6 @@ export {
   findById,
   createUser,
   updateLastLogin,
-  setEmailVerified,
   updatePasswordHash,
   approveStudent,
   deleteUserByRole,
@@ -131,7 +122,6 @@ export default {
   findById,
   createUser,
   updateLastLogin,
-  setEmailVerified,
   updatePasswordHash,
   approveStudent,
   deleteUserByRole,

@@ -28,12 +28,12 @@ async function addPayment(payload) {
   const paidAmount = await paymentRepository.sumPaidAmount(payload.enrollmentId);
   const pendingAmount = Number(enrollment.total_fee) - paidAmount;
 
-  await emailService.sendPaymentReceiptEmail({
+  emailService.sendPaymentReceiptEmail({
     to: enrollment.email,
     amount: payment.amount,
     receiptUrl: payment.receipt_url,
     name: enrollment.name,
-  });
+  }).catch((err) => console.error('[Email] Payment receipt email failed:', err.message));
 
   return {
     payment,

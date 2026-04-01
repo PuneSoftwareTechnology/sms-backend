@@ -4,12 +4,6 @@ import userRepository from '../repositories/user.repository.js';
 import recruiterRepository from '../repositories/recruiter.repository.js';
 import env from '../config/env.js';
 
-async function sendSignupVerificationEmail({ to, name, token }) {
-  const verificationLink = `${env.frontendUrl}/verify-email?token=${token}`;
-  const { subject, html } = templates.signupVerificationTemplate({ name, verificationLink });
-  await sesService.sendEmail({ to, subject, html });
-}
-
 async function sendPasswordResetEmail({ to, token, name }) {
   const userName = name || (await userRepository.findByEmail(to))?.name;
   const resetLink = `${env.frontendUrl}/reset-password?token=${token}`;
@@ -46,14 +40,27 @@ async function sendShortlistNotification({ recruiterId, studentId, course }) {
   await sesService.sendEmail({ to: student.email, subject, html });
 }
 
-async function sendPaymentReceiptEmail({ to, amount, receiptUrl, name }) {
+async function sendPaymentReceiptEmail({ to, amount, receiptUrl, name, receiptPdf }) {
   const userName = name || (await userRepository.findByEmail(to))?.name;
   const { subject, html } = templates.paymentReceiptTemplate({
     name: userName,
     amount,
     receiptUrl,
   });
-  await sesService.sendEmail({ to, subject, html });
+
+  if (receiptPdf) {
+    await sesService.sendEmailWithAttachment({
+      to,
+      subject,
+      html,
+      attachment: {
+        content: receiptPdf,
+        filename: `Payment_Receipt_${(userName || 'Student').replace(/\s+/g, '_')}.pdf`,
+      },
+    });
+  } else {
+    await sesService.sendEmail({ to, subject, html });
+  }
 }
 
 async function sendCertificateEmail({ to, certificateUrl, name }) {
@@ -96,7 +103,6 @@ async function sendBulkCustomEmail({ recipients, subject, body }) {
 }
 
 export {
-  sendSignupVerificationEmail,
   sendPasswordResetEmail,
   sendCvDownloadNotification,
   sendShortlistNotification,
@@ -106,7 +112,6 @@ export {
 };
 
 export default {
-  sendSignupVerificationEmail,
   sendPasswordResetEmail,
   sendCvDownloadNotification,
   sendShortlistNotification,

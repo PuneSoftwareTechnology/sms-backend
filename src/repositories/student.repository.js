@@ -213,6 +213,24 @@ async function findEvaluationsByStudentId(studentId, client = pool) {
   return rows;
 }
 
+async function findTestScoresByStudentId(studentId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       a.test_id   AS "testId",
+       t.title      AS "testName",
+       t.course,
+       a.score,
+       a.total_marks AS "totalMarks",
+       a.submitted_at AS "submittedAt"
+     FROM attempts a
+     JOIN tests t ON a.test_id = t.id
+     WHERE a.user_id = $1 AND a.status IN ('submitted', 'expired')
+     ORDER BY t.course, a.submitted_at ASC`,
+    [studentId],
+  );
+  return rows;
+}
+
 export {
   createEmptyProfile,
   updateProfile,
@@ -224,6 +242,7 @@ export {
   findCvByStudentId,
   upsertCv,
   findEvaluationsByStudentId,
+  findTestScoresByStudentId,
   updateCommunicationScore,
   updateEvaluation,
 };
@@ -239,6 +258,7 @@ export default {
   findCvByStudentId,
   upsertCv,
   findEvaluationsByStudentId,
+  findTestScoresByStudentId,
   updateCommunicationScore,
   updateEvaluation,
 };

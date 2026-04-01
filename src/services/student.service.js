@@ -39,29 +39,11 @@ async function signup(payload) {
     );
   }
 
-  // 5. Activate: update password and mark email as verified (admin already validated identity)
+  // 5. Activate: update password
   const passwordHash = await bcrypt.hash(payload.password, 10);
-  const client = await pool.connect();
+  await userRepository.updatePasswordHash(existingUser.id, passwordHash);
 
-  try {
-    await client.query("BEGIN");
-
-    await userRepository.updatePasswordHash(
-      existingUser.id,
-      passwordHash,
-      client,
-    );
-    await userRepository.setEmailVerified(existingUser.id, client);
-
-    await client.query("COMMIT");
-
-    return existingUser;
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-  }
+  return existingUser;
 }
 
 async function updateProfile(userId, payload) {
@@ -193,7 +175,7 @@ async function getMyFullProfile(studentId) {
   const enrollment = await enrollmentRepository.findByStudentId(studentId);
 
   // Fetch payment data, QR code, CV, evaluations, and project submission in parallel
-  const [qrResult, payments, cv, evaluations, projectSubmissions] = await Promise.all([
+  const [qrResult, payments, cv, evaluations, projectSubmissions, testScores] = await Promise.all([
     pool.query(
       "SELECT image_url, bank_name, branch, upi_id, account_number, ifsc_code FROM qr_codes WHERE is_active = true LIMIT 1",
     ),
@@ -203,7 +185,24 @@ async function getMyFullProfile(studentId) {
     studentRepository.findCvByStudentId(studentId),
     studentRepository.findEvaluationsByStudentId(studentId),
     studentRepository.findProjectSubmissionsByStudentId(studentId),
+    studentRepository.findTestScoresByStudentId(studentId),
   ]);
+
+  // Group individual test scores by course and attach to evaluations
+  const testScoresByCourse = {};
+  for (const ts of testScores) {
+    if (!testScoresByCourse[ts.course]) testScoresByCourse[ts.course] = [];
+    testScoresByCourse[ts.course].push({
+      testId: ts.testId,
+      testName: ts.testName,
+      score: ts.score,
+      totalMarks: ts.totalMarks,
+      submittedAt: ts.submittedAt,
+    });
+  }
+  for (const ev of evaluations) {
+    ev.testScores = testScoresByCourse[ev.courseName] || [];
+  }
 
   const activeQr = qrResult.rows[0] || null;
 
@@ -365,7 +364,8 @@ async function uploadCertificate(studentId, file) {
 
   const key = `${studentId}/certificates/${Date.now()}_${file.originalname}`;
   await s3Service.uploadBuffer(file.buffer, key, file.mimetype);
-  return { url: key };
+  const signedUrl = await s3Service.getSignedDownloadUrl(key);
+  return { url: signedUrl, key };
 }
 
 export {

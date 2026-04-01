@@ -1,4 +1,4 @@
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { SESClient, SendEmailCommand, SendRawEmailCommand } from '@aws-sdk/client-ses';
 import { NodeHttpHandler } from '@smithy/node-http-handler';
 import { Agent } from 'node:https';
 import env from '../config/env.js';
@@ -72,6 +72,47 @@ async function sendBulkEmail(recipients, subject, html) {
   return results;
 }
 
-export { sendEmail, sendBulkEmail };
+async function sendEmailWithAttachment({ to, subject, html, attachment }) {
+  if (!env.sesFromEmail) {
+    console.warn('[SES] SES_FROM_EMAIL not configured, skipping email to:', to);
+    return null;
+  }
 
-export default { sendEmail, sendBulkEmail };
+  const toAddress = Array.isArray(to) ? to[0] : to;
+  const boundary = `----=_Part_${Date.now()}`;
+  const fileName = attachment.filename || 'receipt.pdf';
+
+  const rawMessage = [
+    `From: ${env.sesFromEmail}`,
+    `To: ${toAddress}`,
+    `Subject: ${subject}`,
+    'MIME-Version: 1.0',
+    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/html; charset=UTF-8',
+    'Content-Transfer-Encoding: 7bit',
+    '',
+    html,
+    '',
+    `--${boundary}`,
+    `Content-Type: application/pdf; name="${fileName}"`,
+    'Content-Transfer-Encoding: base64',
+    `Content-Disposition: attachment; filename="${fileName}"`,
+    '',
+    attachment.content,
+    '',
+    `--${boundary}--`,
+  ].join('\r\n');
+
+  const result = await ses.send(
+    new SendRawEmailCommand({
+      RawMessage: { Data: Buffer.from(rawMessage) },
+    }),
+  );
+  return result.MessageId;
+}
+
+export { sendEmail, sendBulkEmail, sendEmailWithAttachment };
+
+export default { sendEmail, sendBulkEmail, sendEmailWithAttachment };

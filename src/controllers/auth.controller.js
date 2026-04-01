@@ -7,11 +7,6 @@ async function login(req, res) {
   return ok(res, result, "Login successful");
 }
 
-async function verifyEmail(req, res) {
-  const result = await authService.verifyEmail(req.validated.body.token);
-  return ok(res, result, "Email verified");
-}
-
 async function forgotPassword(req, res) {
   const result = await authService.forgotPassword(req.validated.body.email);
   return ok(res, result, "Password reset email sent if account exists");
@@ -28,6 +23,6 @@ async function logout(req, res) {
   return ok(res, result, "Logout successful");
 }
 
-export { login, verifyEmail, forgotPassword, resetPassword, logout };
+export { login, forgotPassword, resetPassword, logout };
 
-export default { login, verifyEmail, forgotPassword, resetPassword, logout };
+export default { login, forgotPassword, resetPassword, logout };
