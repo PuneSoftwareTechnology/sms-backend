@@ -1,4 +1,7 @@
 import enrollmentService from "../services/enrollment.service.js";
+import enrollmentRepository from "../repositories/enrollment.repository.js";
+import emailService from "../services/email.service.js";
+import ApiError from "../utils/apiError.js";
 import { ok } from "../utils/apiResponse.js";
 
 async function listEnrollments(req, res) {
@@ -52,6 +55,41 @@ async function deleteEnrollment(req, res) {
   return ok(res, null, "Enrollment deleted successfully");
 }
 
+async function sendReceipt(req, res) {
+  const { enrollmentId, installmentId } = req.params;
+  const enrollment = await enrollmentRepository.findEnrollmentDetailsById(enrollmentId);
+  if (!enrollment) throw new ApiError(404, "Enrollment not found");
+  if (!enrollment.email) throw new ApiError(400, "Student has no email address");
+
+  const num = parseInt(installmentId, 10);
+  const amount = enrollment[`installment${num}_amount`];
+  if (!amount) throw new ApiError(400, `Installment ${num} has no payment recorded`);
+
+  await emailService.sendPaymentReceiptEmail({
+    to: enrollment.email,
+    amount,
+    receiptUrl: null,
+    name: enrollment.name,
+  });
+
+  return ok(res, null, "Receipt sent successfully");
+}
+
+async function sendCertificate(req, res) {
+  const { enrollmentId } = req.params;
+  const enrollment = await enrollmentRepository.findEnrollmentDetailsById(enrollmentId);
+  if (!enrollment) throw new ApiError(404, "Enrollment not found");
+  if (!enrollment.email) throw new ApiError(400, "Student has no email address");
+
+  await emailService.sendCertificateEmail({
+    to: enrollment.email,
+    certificateUrl: enrollment.certificate_url || null,
+    name: enrollment.name,
+  });
+
+  return ok(res, null, "Certificate sent successfully");
+}
+
 export {
   listEnrollments,
   createEnrollment,
@@ -60,6 +98,8 @@ export {
   updateBatchEndDate,
   updateEnrollment,
   deleteEnrollment,
+  sendReceipt,
+  sendCertificate,
 };
 
 export default {
@@ -70,4 +110,6 @@ export default {
   updateBatchEndDate,
   updateEnrollment,
   deleteEnrollment,
+  sendReceipt,
+  sendCertificate,
 };

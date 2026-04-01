@@ -75,6 +75,15 @@ router.put(
 );
 
 router.post(
+  "/enrollments/:enrollmentId/installments/:installmentId/send-receipt",
+  asyncHandler(enrollmentController.sendReceipt),
+);
+router.post(
+  "/enrollments/:enrollmentId/send-certificate",
+  asyncHandler(enrollmentController.sendCertificate),
+);
+
+router.post(
   "/payments",
   validate(createPaymentSchema),
   asyncHandler(paymentController.createPayment),
