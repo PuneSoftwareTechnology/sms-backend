@@ -67,6 +67,20 @@ async function approveStudent(id, client = pool) {
   return rows[0] || null;
 }
 
+async function unapproveStudent(id, client = pool) {
+  const { rows } = await client.query(
+    `
+      UPDATE users
+      SET is_approved = false,
+          updated_at = NOW()
+      WHERE id = $1 AND role = 'STUDENT'
+      RETURNING id, name, email, role, is_approved
+    `,
+    [id],
+  );
+  return rows[0] || null;
+}
+
 async function deleteUserByRole(id, role, client = pool) {
   const { rows } = await client.query(
     "DELETE FROM users WHERE id = $1 AND role = $2 RETURNING id",
@@ -124,6 +138,7 @@ export default {
   updateLastLogin,
   updatePasswordHash,
   approveStudent,
+  unapproveStudent,
   deleteUserByRole,
   deactivateInactiveRecruiters,
   listUsersByRole,

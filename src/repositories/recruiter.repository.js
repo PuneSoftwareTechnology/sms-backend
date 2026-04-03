@@ -27,8 +27,8 @@ async function findCandidates(filters = {}, recruiterId, client = pool) {
   const countResult = await client.query(
     `SELECT COUNT(*)::int AS total
      FROM users u
-     JOIN student_profiles sp ON u.id = sp.user_id
-     JOIN enrollments e ON u.id = e.student_id
+     LEFT JOIN student_profiles sp ON u.id = sp.user_id
+     LEFT JOIN enrollments e ON u.id = e.student_id AND e.deleted = FALSE
      WHERE ${whereClause}`,
     filterValues,
   );
@@ -52,8 +52,8 @@ async function findCandidates(filters = {}, recruiterId, client = pool) {
         cv.file_url                   AS "cvUrl",
         CASE WHEN rs.id IS NOT NULL THEN true ELSE false END AS "isShortlisted"
       FROM users u
-      JOIN student_profiles sp ON u.id = sp.user_id
-      JOIN enrollments e ON u.id = e.student_id
+      LEFT JOIN student_profiles sp ON u.id = sp.user_id
+      LEFT JOIN enrollments e ON u.id = e.student_id AND e.deleted = FALSE
       LEFT JOIN cvs cv ON u.id = cv.student_id
       LEFT JOIN recruiter_shortlists rs
         ON rs.student_id = u.id AND rs.recruiter_id = $1 AND rs.course = e.course

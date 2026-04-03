@@ -150,6 +150,11 @@ router.patch(
   validate(uuidIdParamSchema),
   asyncHandler(studentController.approveStudent),
 );
+router.patch(
+  "/students/:id/unapprove",
+  validate(uuidIdParamSchema),
+  asyncHandler(studentController.unapproveStudent),
+);
 
 router.put(
   "/evaluations/:evaluationId",

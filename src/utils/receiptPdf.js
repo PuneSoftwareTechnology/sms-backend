@@ -1,4 +1,5 @@
 import PDFDocument from 'pdfkit';
+import sharp from 'sharp';
 
 const INSTITUTE_CONFIG = {
   PST: {
@@ -8,6 +9,7 @@ const INSTITUTE_CONFIG = {
     authorizedBy: 'Autorized - Pune Software Technologies',
     headerColor: '#1a3c7a',
     headerColorRgb: [26, 60, 122],
+    logo: 'https://www.punesoftwaretechnologies.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2FLogo.a02dd24f.png&w=64&q=75',
   },
   TCH: {
     name: 'TCH Software Services LLP',
@@ -16,6 +18,7 @@ const INSTITUTE_CONFIG = {
     authorizedBy: 'Autorized - Tech Concept Hub',
     headerColor: '#4a1a8a',
     headerColorRgb: [74, 26, 138],
+    logo: 'https://media2.dev.to/dynamic/image/width=320,height=320,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.amazonaws.com%2Fuploads%2Fuser%2Fprofile_image%2F2662376%2Fe53bb90e-9bba-4bd7-af12-a7cbc862e9d6.png',
   },
 };
 
@@ -87,8 +90,17 @@ export function generateReceiptHtml(data) {
 
       <!-- Header -->
       <div style="padding:20px 30px;">
-        <h1 style="margin:0;font-size:22px;font-weight:700;color:${config.headerColor};">${config.name}</h1>
-        ${config.address ? `<p style="margin:4px 0 0;font-size:13px;color:#444;">${config.address}</p>` : ''}
+        <table style="border-collapse:collapse;" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="vertical-align:middle;padding-right:16px;">
+              <img src="${config.logo}" alt="${config.shortName}" width="64" height="64" style="display:block;width:64px;height:64px;object-fit:contain;" />
+            </td>
+            <td style="vertical-align:middle;">
+              <h1 style="margin:0;font-size:22px;font-weight:700;color:${config.headerColor};">${config.name}</h1>
+              ${config.address ? `<p style="margin:4px 0 0;font-size:13px;color:#444;">${config.address}</p>` : ''}
+            </td>
+          </tr>
+        </table>
       </div>
 
       <!-- Title -->
@@ -175,13 +187,29 @@ export function generateReceiptHtml(data) {
 
 // --- PDF generation via pdfkit ---
 
+async function fetchImageBuffer(url) {
+  const response = await fetch(url);
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  // Convert any format (webp, etc.) to PNG for pdfkit compatibility
+  return sharp(buffer).png().toBuffer();
+}
+
 export default function generateReceiptPdf(data) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
       const config = INSTITUTE_CONFIG[data.institute] || INSTITUTE_CONFIG.PST;
       const receiptNo = generateReceiptNumber(data.enrollmentId, data.installmentDate);
       const receiptDate = formatReceiptDate(data.installmentDate);
       const amountInWords = numberToWords(data.amountReceived);
+
+      // Fetch logo image
+      let logoBuffer = null;
+      try {
+        logoBuffer = await fetchImageBuffer(config.logo);
+      } catch (e) {
+        // Continue without logo if fetch fails
+      }
 
       const doc = new PDFDocument({ size: 'A4', margin: 50 });
       const chunks = [];
@@ -203,12 +231,19 @@ export default function generateReceiptPdf(data) {
 
       // ── Header ──
       const [r, g, b] = config.headerColorRgb;
+      let headerTextX = marginL;
+
+      if (logoBuffer) {
+        doc.image(logoBuffer, marginL, 55, { width: 50, height: 50 });
+        headerTextX = marginL + 60;
+      }
+
       doc.fontSize(20).fillColor([r, g, b]).font('Helvetica-Bold')
-        .text(config.name, marginL, 60, { width: contentW });
+        .text(config.name, headerTextX, 60, { width: contentW - (headerTextX - marginL) });
 
       if (config.address) {
         doc.fontSize(10).fillColor('#444444').font('Helvetica')
-          .text(config.address, marginL, doc.y + 4, { width: contentW });
+          .text(config.address, headerTextX, doc.y + 4, { width: contentW - (headerTextX - marginL) });
       }
 
       // ── Title ──

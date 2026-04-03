@@ -138,6 +138,14 @@ async function approveStudent(studentId) {
   return approved;
 }
 
+async function unapproveStudent(studentId) {
+  const result = await userRepository.unapproveStudent(studentId);
+  if (!result) {
+    throw new ApiError(404, "Student not found");
+  }
+  return result;
+}
+
 async function uploadProject(studentId, file) {
   if (!file) {
     throw new ApiError(400, "Project file is required");
@@ -394,6 +402,7 @@ export default {
   getProfile,
   getMyFullProfile,
   approveStudent,
+  unapproveStudent,
   uploadProject,
   uploadCv,
   uploadCertificate,

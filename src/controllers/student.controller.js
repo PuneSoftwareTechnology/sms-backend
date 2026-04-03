@@ -26,6 +26,11 @@ async function approveStudent(req, res) {
   return ok(res, student, 'Student approved');
 }
 
+async function unapproveStudent(req, res) {
+  const student = await studentService.unapproveStudent(req.params.id);
+  return ok(res, student, 'Student approval revoked');
+}
+
 async function uploadProfilePhoto(req, res) {
   const profile = await studentService.uploadProfilePhoto(req.user.id, req.file);
   return ok(res, profile, 'Profile photo updated');
@@ -71,6 +76,7 @@ export {
   getMyProfile,
   getStudentProfile,
   approveStudent,
+  unapproveStudent,
   uploadProfilePhoto,
   uploadProject,
   uploadCv,
@@ -86,6 +92,7 @@ export default {
   getMyProfile,
   getStudentProfile,
   approveStudent,
+  unapproveStudent,
   uploadProfilePhoto,
   uploadProject,
   uploadCv,
