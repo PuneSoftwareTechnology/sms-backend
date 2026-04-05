@@ -5,6 +5,26 @@ provider:
   runtime: nodejs20.x
   region: ap-south-1
   stage: ${opt:stage, 'prod'}
+  httpApi:
+    cors:
+      allowedOrigins:
+        - https://training2expert.vercel.app
+        - https://www.training2expert.com
+        - http://localhost:3000
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+        - X-Amz-Date
+        - X-Api-Key
+        - X-Amz-Security-Token
+      allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      allowCredentials: true
   memorySize: 512
   timeout: 29
   architecture: arm64

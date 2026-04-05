@@ -1,5 +1,4 @@
 import PDFDocument from 'pdfkit';
-import sharp from 'sharp';
 
 const INSTITUTE_CONFIG = {
   PST: {
@@ -190,9 +189,7 @@ export function generateReceiptHtml(data) {
 async function fetchImageBuffer(url) {
   const response = await fetch(url);
   const arrayBuffer = await response.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  // Convert any format (webp, etc.) to PNG for pdfkit compatibility
-  return sharp(buffer).png().toBuffer();
+  return Buffer.from(arrayBuffer);
 }
 
 export default function generateReceiptPdf(data) {

@@ -114,7 +114,7 @@
       "Properties": {
         "Code": {
           "S3Bucket": "serverless-framework-deployments-ap-south-1-9f2ef30f-e539",
-          "S3Key": "serverless/sms-backend/prod/1775068829989-2026-04-01T18:40:29.989Z/api.zip"
+          "S3Key": "serverless/sms-backend/prod/1775366388856-2026-04-05T05:19:48.856Z/api.zip"
         },
         "Handler": "dist/lambda.handler",
         "Runtime": "nodejs20.x",
@@ -154,7 +154,7 @@
       "Properties": {
         "Code": {
           "S3Bucket": "serverless-framework-deployments-ap-south-1-9f2ef30f-e539",
-          "S3Key": "serverless/sms-backend/prod/1775068829989-2026-04-01T18:40:29.989Z/cron.zip"
+          "S3Key": "serverless/sms-backend/prod/1775366388856-2026-04-05T05:19:48.856Z/cron.zip"
         },
         "Handler": "dist/cron.deactivateInactiveRecruiters",
         "Runtime": "nodejs20.x",
@@ -189,25 +189,25 @@
         "CronLogGroup"
       ]
     },
-    "CronLambdaVersionRabZGDBOLNheaGePHPBhw8ql6YdBw6bzjf2GMcw3rI": {
+    "CronLambdaVersionr5e3LygPCdrg3WxQRMfhM6NFKLFttVrDjqxpPPMYdyY": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "CronLambdaFunction"
         },
-        "CodeSha256": "5Hn4ODuuery8i83IjLOjVI+Dj1Yoo3/GBXd0V2zAx0w=",
+        "CodeSha256": "gp9v7GL0E5E4lCSjMUGcWg69lPjftQMHVjAkdmKdahI=",
         "Description": "Daily recruiter deactivation"
       }
     },
-    "ApiLambdaVersionyDNbsliesWPtj9kmR10MifWb5Mo9y1aLd9ad6Uek": {
+    "ApiLambdaVersionIvzIgDFpxaoryHjvTo5w9fL7vM5Psw4swoln3tGMXc": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "ApiLambdaFunction"
         },
-        "CodeSha256": "7dxzg917OxFW2le4Y4G8RkgFG4eHhgOzT+pbMUNazME=",
+        "CodeSha256": "ypHDB4w5mxltNzl5UZ3mKPoR/Bp+LF3U1GFYRZGZ0fc=",
         "Description": "SMS Backend API"
       }
     },
@@ -252,7 +252,30 @@
       "Type": "AWS::ApiGatewayV2::Api",
       "Properties": {
         "Name": "prod-sms-backend",
-        "ProtocolType": "HTTP"
+        "ProtocolType": "HTTP",
+        "CorsConfiguration": {
+          "AllowCredentials": true,
+          "AllowHeaders": [
+            "Content-Type",
+            "Authorization",
+            "X-Amz-Date",
+            "X-Api-Key",
+            "X-Amz-Security-Token"
+          ],
+          "AllowMethods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+            "OPTIONS"
+          ],
+          "AllowOrigins": [
+            "https://training2expert.vercel.app",
+            "https://www.training2expert.com",
+            "http://localhost:3000"
+          ]
+        }
       }
     },
     "HttpApiStage": {
@@ -375,7 +398,7 @@
     "CronLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "CronLambdaVersionRabZGDBOLNheaGePHPBhw8ql6YdBw6bzjf2GMcw3rI"
+        "Ref": "CronLambdaVersionr5e3LygPCdrg3WxQRMfhM6NFKLFttVrDjqxpPPMYdyY"
       },
       "Export": {
         "Name": "sls-sms-backend-prod-CronLambdaFunctionQualifiedArn"
@@ -384,7 +407,7 @@
     "ApiLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "ApiLambdaVersionyDNbsliesWPtj9kmR10MifWb5Mo9y1aLd9ad6Uek"
+        "Ref": "ApiLambdaVersionIvzIgDFpxaoryHjvTo5w9fL7vM5Psw4swoln3tGMXc"
       },
       "Export": {
         "Name": "sls-sms-backend-prod-ApiLambdaFunctionQualifiedArn"

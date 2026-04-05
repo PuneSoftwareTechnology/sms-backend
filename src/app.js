@@ -17,6 +17,7 @@ app.use(
       env.corsOrigin === "*"
         ? true
         : env.corsOrigin.split(",").map((o) => o.trim()),
+    credentials: true,
   }),
 );
 app.use(compression());
