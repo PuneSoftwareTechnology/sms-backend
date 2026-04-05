@@ -37,7 +37,7 @@ async function login(email, password) {
 
 async function forgotPassword(email) {
   const user = await userRepository.findByEmail(email);
-  if (!user) {
+  if (!user || !user.is_active || !user.is_approved) {
     return { sent: true };
   }
 

@@ -236,11 +236,19 @@ async function getMyFullProfile(studentId) {
 
   // Resolve project submission presigned URLs
   const resolvedProjects = await Promise.all(
-    projectSubmissions.map(async (ps) => ({
-      id: ps.id,
-      url: await s3Service.resolvePresignedUrl(ps.fileUrl),
-      createdAt: ps.createdAt,
-    })),
+    projectSubmissions.map(async (ps) => {
+      // Extract original filename from S3 key: {studentId}/projects/{timestamp}_{originalname}
+      const keyParts = ps.fileUrl.split("/").pop() || "";
+      const underscoreIdx = keyParts.indexOf("_");
+      const originalFilename =
+        underscoreIdx !== -1 ? keyParts.substring(underscoreIdx + 1) : keyParts;
+      return {
+        id: ps.id,
+        url: await s3Service.resolvePresignedUrl(ps.fileUrl),
+        originalFilename,
+        createdAt: ps.createdAt,
+      };
+    }),
   );
 
   // Resolve QR code image presigned URL
