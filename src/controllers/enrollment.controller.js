@@ -46,7 +46,7 @@ async function updateBatchEndDate(req, res) {
 async function updateEnrollment(req, res) {
   const result = await enrollmentService.updateEnrollment(
     req.params.enrollmentId,
-    req.body,
+    req.validated?.body ?? req.body,
   );
   return ok(res, result, "Enrollment updated successfully");
 }

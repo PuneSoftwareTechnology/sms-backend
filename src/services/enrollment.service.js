@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import pool from "../config/db.js";
+import ApiError from "../utils/apiError.js";
 import enrollmentRepository from "../repositories/enrollment.repository.js";
 import userRepository from "../repositories/user.repository.js";
 import studentRepository from "../repositories/student.repository.js";
@@ -96,7 +97,7 @@ async function updateEnrollment(enrollmentId, payload) {
 
     // Update user fields (name, email, phone) if provided
     const enrollment = await enrollmentRepository.findEnrollmentDetailsById(enrollmentId, client);
-    if (!enrollment) throw new Error("Enrollment not found");
+    if (!enrollment) throw new ApiError(404, "Enrollment not found");
 
     if (payload.name || payload.email || payload.phone) {
       const userUpdates = [];
@@ -138,7 +139,7 @@ async function updateEnrollment(enrollmentId, payload) {
 
 async function softDeleteEnrollment(enrollmentId) {
   const result = await enrollmentRepository.softDeleteEnrollment(enrollmentId);
-  if (!result) throw new Error("Enrollment not found");
+  if (!result) throw new ApiError(404, "Enrollment not found");
   return result;
 }
 

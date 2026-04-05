@@ -18,7 +18,7 @@ const updateEnrollmentSchema = z.object({
     trainer: z.string().nullable().optional(),
     start_date: z.string().nullable().optional(),
     end_date: z.string().nullable().optional(),
-    completion_status: z.enum(["ACTIVE", "DROPOUT", "COMPLETED"]).optional(),
+    completion_status: z.enum(["IN_PROGRESS", "ACTIVE", "DROPOUT", "COMPLETED"]).optional(),
     total_fee: z.number().min(0).optional(),
     placement_status: z.string().nullable().optional(),
     company_name: z.string().nullable().optional(),
