@@ -84,7 +84,7 @@ async function updateProfile(userId, payload) {
     await client.query("COMMIT");
 
     // Return the full combined profile with resolved URLs
-    const fullProfile = await studentRepository.findFullProfile(userId);
+    const fullProfile = await studentRepository.findFullProfile(userId, client);
     return resolveProfileUrls(fullProfile);
   } catch (error) {
     await client.query("ROLLBACK");

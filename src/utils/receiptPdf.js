@@ -8,7 +8,7 @@ const INSTITUTE_CONFIG = {
     authorizedBy: 'Autorized - Pune Software Technologies',
     headerColor: '#1a3c7a',
     headerColorRgb: [26, 60, 122],
-    logo: 'https://www.punesoftwaretechnologies.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2FLogo.a02dd24f.png&w=64&q=75',
+    logo: 'https://www.punesoftwaretechnologies.com/_next/static/media/Logo.a02dd24f.png',
   },
   TCH: {
     name: 'TCH Software Services LLP',
@@ -17,7 +17,7 @@ const INSTITUTE_CONFIG = {
     authorizedBy: 'Autorized - Tech Concept Hub',
     headerColor: '#4a1a8a',
     headerColorRgb: [74, 26, 138],
-    logo: 'https://media2.dev.to/dynamic/image/width=320,height=320,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.amazonaws.com%2Fuploads%2Fuser%2Fprofile_image%2F2662376%2Fe53bb90e-9bba-4bd7-af12-a7cbc862e9d6.png',
+    logo: 'https://dev-to-uploads.s3.amazonaws.com/uploads/user/profile_image/2662376/e53bb90e-9bba-4bd7-af12-a7cbc862e9d6.png',
   },
 };
 
@@ -187,9 +187,20 @@ export function generateReceiptHtml(data) {
 // --- PDF generation via pdfkit ---
 
 async function fetchImageBuffer(url) {
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: { 'Accept': 'image/png, image/jpeg' },
+  });
   const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer);
+  const buffer = Buffer.from(arrayBuffer);
+
+  // Validate that the image is PNG or JPEG (formats supported by pdfkit)
+  const isPng = buffer[0] === 0x89 && buffer[1] === 0x50;
+  const isJpeg = buffer[0] === 0xFF && buffer[1] === 0xD8;
+  if (!isPng && !isJpeg) {
+    throw new Error(`Unsupported image format (expected PNG or JPEG)`);
+  }
+
+  return buffer;
 }
 
 export default function generateReceiptPdf(data) {

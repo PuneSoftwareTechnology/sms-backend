@@ -128,7 +128,8 @@ async function updateEnrollment(enrollmentId, payload) {
     await enrollmentRepository.updateEnrollment(enrollmentId, enrollmentFields, client);
 
     await client.query("COMMIT");
-    return await enrollmentRepository.findEnrollmentDetailsById(enrollmentId);
+    const updated = await enrollmentRepository.findEnrollmentDetailsById(enrollmentId, client);
+    return updated;
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
