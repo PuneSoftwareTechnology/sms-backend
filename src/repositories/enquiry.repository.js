@@ -3,8 +3,8 @@ import pool from "../config/db.js";
 async function createEnquiry(payload, client = pool) {
   const { rows } = await client.query(
     `
-      INSERT INTO enquiries (enquiry_date, name, phone, email, course, institute, lead_status, demo_status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO enquiries (enquiry_date, name, phone, email, course, institute, lead_status, demo_status, comment)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `,
     [
@@ -16,6 +16,7 @@ async function createEnquiry(payload, client = pool) {
       payload.institute || null,
       payload.leadStatus || "PROSPECTIVE",
       payload.demoStatus || "PENDING",
+      payload.comment || null,
     ],
   );
   return rows[0];
@@ -27,11 +28,11 @@ async function listEnquiries(filters = {}, client = pool) {
 
   if (filters.fromDate) {
     values.push(filters.fromDate);
-    conditions.push(`created_at::date >= $${values.length}`);
+    conditions.push(`enquiry_date >= $${values.length}`);
   }
   if (filters.toDate) {
     values.push(filters.toDate);
-    conditions.push(`created_at::date <= $${values.length}`);
+    conditions.push(`enquiry_date <= $${values.length}`);
   }
   if (filters.leadStatus) {
     values.push(filters.leadStatus);
@@ -77,8 +78,9 @@ async function updateEnquiry(id, payload, client = pool) {
           institute = $6,
           lead_status = $7,
           demo_status = $8,
+          comment = $9,
           updated_at = NOW()
-      WHERE id = $9
+      WHERE id = $10
       RETURNING *
     `,
     [
@@ -90,6 +92,7 @@ async function updateEnquiry(id, payload, client = pool) {
       payload.institute || null,
       payload.leadStatus,
       payload.demoStatus,
+      payload.comment || null,
       id,
     ],
   );

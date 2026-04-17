@@ -56,25 +56,19 @@ async function deleteEnrollment(req, res) {
   return ok(res, null, "Enrollment deleted successfully");
 }
 
-async function sendReceipt(req, res) {
-  const { enrollmentId, installmentId } = req.params;
-  const enrollment = await enrollmentRepository.findEnrollmentDetailsById(enrollmentId);
-  if (!enrollment) throw new ApiError(404, "Enrollment not found");
-  if (!enrollment.email) throw new ApiError(400, "Student has no email address");
-
-  const num = parseInt(installmentId, 10);
+function buildReceiptData(enrollmentId, enrollment, installmentNum) {
+  const num = parseInt(installmentNum, 10);
   const amount = enrollment[`installment${num}_amount`];
   const date = enrollment[`installment${num}_date`];
   const mode = enrollment[`installment${num}_mode`];
   if (!amount) throw new ApiError(400, `Installment ${num} has no payment recorded`);
 
-  // Calculate total paid across all installments
   const totalPaid = [1, 2, 3].reduce(
     (sum, i) => sum + (Number(enrollment[`installment${i}_amount`]) || 0),
     0,
   );
 
-  const receiptData = {
+  return {
     enrollmentId,
     studentName: enrollment.name,
     courseName: enrollment.course,
@@ -85,6 +79,15 @@ async function sendReceipt(req, res) {
     installmentDate: date,
     paymentMode: mode,
   };
+}
+
+async function sendReceipt(req, res) {
+  const { enrollmentId, installmentId } = req.params;
+  const enrollment = await enrollmentRepository.findEnrollmentDetailsById(enrollmentId);
+  if (!enrollment) throw new ApiError(404, "Enrollment not found");
+  if (!enrollment.email) throw new ApiError(400, "Student has no email address");
+
+  const receiptData = buildReceiptData(enrollmentId, enrollment, installmentId);
 
   const [receiptPdf, receiptHtml] = await Promise.all([
     generateReceiptPdf(receiptData),
@@ -93,13 +96,28 @@ async function sendReceipt(req, res) {
 
   await emailService.sendPaymentReceiptEmail({
     to: enrollment.email,
-    amount,
+    amount: receiptData.amountReceived,
     name: enrollment.name,
     receiptPdf,
     receiptHtml,
   });
 
   return ok(res, null, "Receipt sent successfully");
+}
+
+async function downloadReceipt(req, res) {
+  const { enrollmentId, installmentId } = req.params;
+  const enrollment = await enrollmentRepository.findEnrollmentDetailsById(enrollmentId);
+  if (!enrollment) throw new ApiError(404, "Enrollment not found");
+
+  const receiptData = buildReceiptData(enrollmentId, enrollment, installmentId);
+  const pdfBase64 = await generateReceiptPdf(receiptData);
+  const pdfBuffer = Buffer.from(pdfBase64, 'base64');
+
+  const fileName = `Receipt_${enrollment.name.replace(/\s+/g, '_')}_${enrollment.course.replace(/\s+/g, '_')}.pdf`;
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+  res.send(pdfBuffer);
 }
 
 async function sendCertificate(req, res) {
@@ -126,6 +144,7 @@ export {
   updateEnrollment,
   deleteEnrollment,
   sendReceipt,
+  downloadReceipt,
   sendCertificate,
 };
 
@@ -138,5 +157,6 @@ export default {
   updateEnrollment,
   deleteEnrollment,
   sendReceipt,
+  downloadReceipt,
   sendCertificate,
 };

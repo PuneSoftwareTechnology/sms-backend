@@ -235,6 +235,35 @@ async function enrollmentFigures(filters = {}, client = pool) {
   return rows;
 }
 
+async function enquiryFigures(filters = {}, client = pool) {
+  const values = [];
+  const conditions = ['eq.enquiry_date IS NOT NULL'];
+
+  if (filters.institute) {
+    values.push(filters.institute);
+    conditions.push(`eq.institute = $${values.length}`);
+  }
+  if (filters.year) {
+    values.push(filters.year);
+    conditions.push(`EXTRACT(YEAR FROM eq.enquiry_date) = $${values.length}`);
+  }
+
+  const { rows } = await client.query(
+    `
+      SELECT
+        eq.course,
+        EXTRACT(MONTH FROM eq.enquiry_date)::int AS month_num,
+        COUNT(*)::int AS total
+      FROM enquiries eq
+      WHERE ${conditions.join(' AND ')}
+      GROUP BY eq.course, EXTRACT(MONTH FROM eq.enquiry_date)
+      ORDER BY eq.course ASC, month_num ASC
+    `,
+    values,
+  );
+  return rows;
+}
+
 async function placementNotContacted(filters = {}, client = pool) {
   const { page, limit, offset } = parsePagination(filters);
   const values = [];
@@ -364,6 +393,6 @@ async function updatePlacementContact(enrollmentId, data, client = pool) {
   return rows[0];
 }
 
-export { candidateFilterReport, feeDueReport, enrollmentFigures, placementNotContacted, placementContacted, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsByStudentIds, getCvKeysByStudentIds, getStudentEmails };
+export { candidateFilterReport, feeDueReport, enrollmentFigures, enquiryFigures, placementNotContacted, placementContacted, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsByStudentIds, getCvKeysByStudentIds, getStudentEmails };
 
-export default { candidateFilterReport, feeDueReport, enrollmentFigures, placementNotContacted, placementContacted, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsByStudentIds, getCvKeysByStudentIds, getStudentEmails };
+export default { candidateFilterReport, feeDueReport, enrollmentFigures, enquiryFigures, placementNotContacted, placementContacted, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsByStudentIds, getCvKeysByStudentIds, getStudentEmails };

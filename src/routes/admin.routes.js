@@ -77,6 +77,10 @@ router.put(
   asyncHandler(enrollmentController.updateBatchEndDate),
 );
 
+router.get(
+  "/enrollments/:enrollmentId/installments/:installmentId/download-receipt",
+  asyncHandler(enrollmentController.downloadReceipt),
+);
 router.post(
   "/enrollments/:enrollmentId/installments/:installmentId/send-receipt",
   asyncHandler(enrollmentController.sendReceipt),
@@ -230,6 +234,10 @@ router.get(
 router.get(
   "/reports/enrollment-figures",
   asyncHandler(reportController.enrollmentFigures),
+);
+router.get(
+  "/reports/enquiry-figures",
+  asyncHandler(reportController.enquiryFigures),
 );
 router.get(
   "/reports/placement",

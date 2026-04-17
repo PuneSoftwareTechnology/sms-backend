@@ -57,6 +57,23 @@ async function enrollmentFigures(filters) {
   return Object.values(courseMap);
 }
 
+async function enquiryFigures(filters) {
+  const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const rows = await reportRepository.enquiryFigures(filters);
+
+  const courseMap = {};
+  for (const row of rows) {
+    if (!courseMap[row.course]) {
+      courseMap[row.course] = { course: row.course, monthlyData: {}, total: 0 };
+    }
+    const monthName = MONTH_NAMES[row.month_num - 1];
+    courseMap[row.course].monthlyData[monthName] = row.total;
+    courseMap[row.course].total += row.total;
+  }
+
+  return Object.values(courseMap);
+}
+
 async function placementReport(filters) {
   const [notContactedResult, contactedResult, courses] = await Promise.all([
     reportRepository.placementNotContacted(filters),
@@ -74,6 +91,6 @@ async function updatePlacementContact(enrollmentId, data) {
   return reportRepository.updatePlacementContact(enrollmentId, data);
 }
 
-export { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsForDownload, getCvKeysForDownload, getStudentEmails };
+export { candidateFilter, feeDue, enrollmentFigures, enquiryFigures, placementReport, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsForDownload, getCvKeysForDownload, getStudentEmails };
 
-export default { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsForDownload, getCvKeysForDownload, getStudentEmails };
+export default { candidateFilter, feeDue, enrollmentFigures, enquiryFigures, placementReport, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsForDownload, getCvKeysForDownload, getStudentEmails };

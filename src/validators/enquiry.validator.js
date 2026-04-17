@@ -12,6 +12,7 @@ const enquiryBody = z.object({
   institute: z.string().optional(),
   leadStatus: z.string().optional(),
   demoStatus: z.string().optional(),
+  comment: z.string().optional(),
 });
 
 const createEnquirySchema = z.object({

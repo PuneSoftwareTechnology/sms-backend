@@ -96,6 +96,18 @@ async function enrollmentFigures(req, res) {
   return ok(res, rows, 'Enrollment figures fetched');
 }
 
+async function enquiryFigures(req, res) {
+  const filters = {};
+  if (req.query.institute && req.query.institute !== 'Combined') {
+    filters.institute = req.query.institute;
+  }
+  if (req.query.year) {
+    filters.year = Number(req.query.year);
+  }
+  const rows = await reportService.enquiryFigures(filters);
+  return ok(res, rows, 'Enquiry figures fetched');
+}
+
 async function placementReport(req, res) {
   const result = await reportService.placementReport({
     fromDate: req.query.fromDate,
@@ -118,6 +130,6 @@ async function updatePlacementContact(req, res) {
   return ok(res, result, 'Placement contact updated');
 }
 
-export { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact, downloadBulkCvs, sendBulkEmail, addBulkComment, updateCandidateRemark };
+export { candidateFilter, feeDue, enrollmentFigures, enquiryFigures, placementReport, updatePlacementContact, downloadBulkCvs, sendBulkEmail, addBulkComment, updateCandidateRemark };
 
-export default { candidateFilter, feeDue, enrollmentFigures, placementReport, updatePlacementContact, downloadBulkCvs, sendBulkEmail, addBulkComment, updateCandidateRemark };
+export default { candidateFilter, feeDue, enrollmentFigures, enquiryFigures, placementReport, updatePlacementContact, downloadBulkCvs, sendBulkEmail, addBulkComment, updateCandidateRemark };

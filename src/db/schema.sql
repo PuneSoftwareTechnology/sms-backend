@@ -98,6 +98,7 @@ CREATE TABLE IF NOT EXISTS enquiries (
   institute VARCHAR(50),
   lead_status lead_status_enum,
   demo_status demo_status_enum,
+  comment TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

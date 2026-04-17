@@ -25,7 +25,7 @@ async function listEnrollments(filters = {}, client = pool) {
   const total = parseInt(countResult.rows[0].count, 10);
 
   const page = Math.max(1, parseInt(filters.page, 10) || 1);
-  const limit = Math.min(100, Math.max(1, parseInt(filters.limit, 10) || 50));
+  const limit = Math.max(1, parseInt(filters.limit, 10) || 50);
   const offset = (page - 1) * limit;
 
   values.push(limit);
