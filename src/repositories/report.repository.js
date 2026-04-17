@@ -148,11 +148,12 @@ async function getCvKeysByStudentIds(studentIds, client = pool) {
   if (!studentIds.length) return [];
   const { rows } = await client.query(
     `
-      SELECT cv.file_url AS "fileKey", u.name, e.course
+      SELECT DISTINCT ON (cv.student_id) cv.file_url AS "fileKey", u.name, e.course
       FROM cvs cv
       JOIN users u ON cv.student_id = u.id
       LEFT JOIN enrollments e ON cv.student_id = e.student_id AND e.deleted = FALSE
       WHERE cv.student_id = ANY($1::uuid[])
+      ORDER BY cv.student_id, e.start_date DESC
     `,
     [studentIds],
   );

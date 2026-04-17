@@ -55,6 +55,11 @@ async function updateCommunicationScore(req, res) {
   return ok(res, updated, 'Evaluation updated');
 }
 
+async function deleteProject(req, res) {
+  const result = await studentService.deleteProject(req.user.id, req.params.projectId);
+  return ok(res, result, 'Project deleted');
+}
+
 async function uploadCertificate(req, res) {
   const result = await studentService.uploadCertificate(req.user.id, req.file);
   return ok(res, result, 'Certificate uploaded', 201);
@@ -79,6 +84,7 @@ export {
   unapproveStudent,
   uploadProfilePhoto,
   uploadProject,
+  deleteProject,
   uploadCv,
   uploadCertificate,
   updateCommunicationScore,
@@ -95,6 +101,7 @@ export default {
   unapproveStudent,
   uploadProfilePhoto,
   uploadProject,
+  deleteProject,
   uploadCv,
   uploadCertificate,
   updateCommunicationScore,

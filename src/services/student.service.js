@@ -376,6 +376,18 @@ async function confirmUpload(studentId, { type, key }) {
   }
 }
 
+async function deleteProject(studentId, projectId) {
+  const deleted = await studentRepository.deleteProjectSubmission(projectId, studentId);
+  if (!deleted) {
+    throw new ApiError(404, "Project not found");
+  }
+  // Clean up from S3
+  if (deleted.fileUrl) {
+    await s3Service.deleteObject(deleted.fileUrl).catch(() => {});
+  }
+  return { message: "Project deleted" };
+}
+
 async function uploadCertificate(studentId, file) {
   if (!file) {
     throw new ApiError(400, "Certificate file is required");
@@ -395,6 +407,7 @@ export {
   getMyFullProfile,
   approveStudent,
   uploadProject,
+  deleteProject,
   uploadCv,
   uploadCertificate,
   updateCommunicationScore,
@@ -412,6 +425,7 @@ export default {
   approveStudent,
   unapproveStudent,
   uploadProject,
+  deleteProject,
   uploadCv,
   uploadCertificate,
   updateCommunicationScore,

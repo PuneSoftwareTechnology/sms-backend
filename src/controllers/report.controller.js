@@ -39,7 +39,8 @@ async function downloadBulkCvs(req, res) {
     try {
       const stream = await s3Service.getObjectStream(cv.fileKey);
       const ext = cv.fileKey.split('.').pop() || 'pdf';
-      const fileName = `${cv.name.replace(/\s+/g, '_')}_${cv.course.replace(/\s+/g, '_')}.${ext}`;
+      const course = cv.course ? cv.course.replace(/\s+/g, '_') : 'Unknown';
+      const fileName = `${cv.name.replace(/\s+/g, '_')}_${course}.${ext}`;
       archive.append(stream, { name: fileName });
     } catch {
       // Skip CVs that can't be fetched from S3

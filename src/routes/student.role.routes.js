@@ -26,6 +26,7 @@ router.get('/tests', asyncHandler(testController.getAvailableTests));
 router.post('/tests/:testId/start', validate(testIdParamSchema), asyncHandler(testController.startTest));
 router.post('/tests/:testId/submit', validate(submitTestSchema), asyncHandler(testController.submitTest));
 router.post('/project-upload', upload.single('file'), asyncHandler(studentController.uploadProject));
+router.delete('/project/:projectId', asyncHandler(studentController.deleteProject));
 router.post('/cv-upload', upload.single('file'), asyncHandler(studentController.uploadCv));
 router.post('/certificate-upload', certificateUpload.single('file'), asyncHandler(studentController.uploadCertificate));
 router.post('/upload-url', validate(uploadUrlSchema), asyncHandler(studentController.getUploadUrl));

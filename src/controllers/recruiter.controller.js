@@ -4,9 +4,13 @@ import { ok } from "../utils/apiResponse.js";
 async function filterCandidates(req, res) {
   const filters = {
     city: req.query.city,
+    area: req.query.area,
     course: req.query.course,
     minExperience: req.query.minExperience
       ? Number(req.query.minExperience)
+      : undefined,
+    maxExperience: req.query.maxExperience
+      ? Number(req.query.maxExperience)
       : undefined,
     page: req.query.page,
     limit: req.query.limit,

@@ -117,6 +117,14 @@ async function findProjectSubmissionsByStudentId(studentId, client = pool) {
   return rows;
 }
 
+async function deleteProjectSubmission(projectId, studentId, client = pool) {
+  const { rows } = await client.query(
+    'DELETE FROM project_submissions WHERE id = $1 AND student_id = $2 RETURNING file_url AS "fileUrl"',
+    [projectId, studentId],
+  );
+  return rows[0] || null;
+}
+
 async function findCvByStudentId(studentId, client = pool) {
   const { rows } = await client.query('SELECT * FROM cvs WHERE student_id = $1', [studentId]);
   return rows[0] || null;
@@ -239,6 +247,7 @@ export {
   findFullProfile,
   createProjectSubmission,
   findProjectSubmissionsByStudentId,
+  deleteProjectSubmission,
   findCvByStudentId,
   upsertCv,
   findEvaluationsByStudentId,
@@ -255,6 +264,7 @@ export default {
   findFullProfile,
   createProjectSubmission,
   findProjectSubmissionsByStudentId,
+  deleteProjectSubmission,
   findCvByStudentId,
   upsertCv,
   findEvaluationsByStudentId,

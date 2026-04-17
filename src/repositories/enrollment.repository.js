@@ -102,6 +102,13 @@ async function getDistinctCourses(client = pool) {
   return rows.map((r) => r.course);
 }
 
+async function getDistinctCompletedCourses(client = pool) {
+  const { rows } = await client.query(
+    "SELECT DISTINCT course FROM enrollments WHERE course IS NOT NULL AND completion_status = 'COMPLETED' AND deleted = FALSE ORDER BY course",
+  );
+  return rows.map((r) => r.course);
+}
+
 async function updateEnrollment(id, payload, client = pool) {
   const fields = [];
   const values = [];
@@ -196,6 +203,7 @@ export {
   findByEmail,
   findByStudentId,
   getDistinctCourses,
+  getDistinctCompletedCourses,
   updateBatchEndDate,
   markBatchCompleted,
   updateEnrollment,
@@ -209,6 +217,7 @@ export default {
   findByEmail,
   findByStudentId,
   getDistinctCourses,
+  getDistinctCompletedCourses,
   updateBatchEndDate,
   markBatchCompleted,
   updateEnrollment,

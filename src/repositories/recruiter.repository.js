@@ -6,11 +6,15 @@ async function findCandidates(filters = {}, recruiterId, client = pool) {
 
   // Build filter conditions — count query params start at $1
   const filterValues = [];
-  const conditions = ["u.role = 'STUDENT'", "u.is_approved = true"];
+  const conditions = ["u.role = 'STUDENT'", "u.is_approved = true", "e.completion_status = 'COMPLETED'"];
 
   if (filters.city) {
     filterValues.push(filters.city);
     conditions.push(`sp.city = $${filterValues.length}`);
+  }
+  if (filters.area) {
+    filterValues.push(filters.area);
+    conditions.push(`sp.area = $${filterValues.length}`);
   }
   if (filters.course) {
     filterValues.push(filters.course);
@@ -18,7 +22,11 @@ async function findCandidates(filters = {}, recruiterId, client = pool) {
   }
   if (filters.minExperience !== undefined) {
     filterValues.push(filters.minExperience);
-    conditions.push(`sp.it_exp_years >= $${filterValues.length}`);
+    conditions.push(`COALESCE(sp.it_exp_years, 0) >= $${filterValues.length}`);
+  }
+  if (filters.maxExperience !== undefined) {
+    filterValues.push(filters.maxExperience);
+    conditions.push(`COALESCE(sp.it_exp_years, 0) <= $${filterValues.length}`);
   }
 
   const whereClause = conditions.join(" AND ");
@@ -46,15 +54,31 @@ async function findCandidates(filters = {}, recruiterId, client = pool) {
         u.id,
         u.name,
         sp.city,
+        sp.area,
         e.course,
         COALESCE(sp.it_exp_years, 0)  AS "itExperienceYears",
         COALESCE(sp.it_exp_months, 0) AS "itExperienceMonths",
+        COALESCE(ts.marks_scored, 0)::int  AS "technicalMarksScored",
+        COALESCE(ts.total_marks, 0)::int   AS "technicalTotalMarks",
+        COALESCE(ev.communication_score, 0)::numeric AS "communicationScore",
         cv.file_url                   AS "cvUrl",
+        ps.file_url                   AS "projectUrl",
         CASE WHEN rs.id IS NOT NULL THEN true ELSE false END AS "isShortlisted"
       FROM users u
       LEFT JOIN student_profiles sp ON u.id = sp.user_id
       LEFT JOIN enrollments e ON u.id = e.student_id AND e.deleted = FALSE
       LEFT JOIN cvs cv ON u.id = cv.student_id
+      LEFT JOIN evaluations ev ON ev.enrollment_id = e.id
+      LEFT JOIN (
+        SELECT a.user_id, t.course,
+               SUM(a.score)::int       AS marks_scored,
+               SUM(a.total_marks)::int AS total_marks
+        FROM attempts a
+        JOIN tests t ON a.test_id = t.id
+        WHERE a.status IN ('submitted', 'expired')
+        GROUP BY a.user_id, t.course
+      ) ts ON ts.user_id = u.id AND ts.course = e.course
+      LEFT JOIN project_submissions ps ON ps.student_id = u.id
       LEFT JOIN recruiter_shortlists rs
         ON rs.student_id = u.id AND rs.recruiter_id = $1 AND rs.course = e.course
       WHERE ${mainWhere}
@@ -204,6 +228,16 @@ async function getDistinctCities(client = pool) {
      ORDER BY sp.city`
   );
   return rows.map((r) => r.city);
+}
+
+async function getDistinctAreas(client = pool) {
+  const { rows } = await client.query(
+    `SELECT DISTINCT sp.area FROM student_profiles sp
+     JOIN users u ON u.id = sp.user_id
+     WHERE u.role = 'STUDENT' AND u.is_approved = true AND sp.area IS NOT NULL AND sp.area != ''
+     ORDER BY sp.area`
+  );
+  return rows.map((r) => r.area);
 }
 
 async function getDistinctExperienceYears(client = pool) {
@@ -373,6 +407,7 @@ export {
   getRecruiterShortlist,
   getAdminRecruiterShortlist,
   getDistinctCities,
+  getDistinctAreas,
   getDistinctExperienceYears,
   createRecruiter,
   updateRecruiter,
@@ -393,6 +428,7 @@ export default {
   getRecruiterShortlist,
   getAdminRecruiterShortlist,
   getDistinctCities,
+  getDistinctAreas,
   getDistinctExperienceYears,
   createRecruiter,
   updateRecruiter,

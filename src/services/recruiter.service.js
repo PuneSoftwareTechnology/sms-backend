@@ -11,15 +11,16 @@ import s3Service from "../utils/s3.service.js";
 const MAX_DOWNLOADS = 100;
 
 async function filterCandidates(filters, recruiterId) {
-  const [paginated, courses, cities, experienceYears] = await Promise.all([
+  const [paginated, courses, cities, areas, experienceYears] = await Promise.all([
     recruiterRepository.findCandidates(filters, recruiterId),
-    enrollmentRepository.getDistinctCourses(),
+    enrollmentRepository.getDistinctCompletedCourses(),
     recruiterRepository.getDistinctCities(),
+    recruiterRepository.getDistinctAreas(),
     recruiterRepository.getDistinctExperienceYears(),
   ]);
 
-  const resolvedItems = await s3Service.resolvePresignedUrlsInArray(paginated.items, ['cvUrl']);
-  return { ...paginated, items: resolvedItems, courses, cities, experienceYears };
+  const resolvedItems = await s3Service.resolvePresignedUrlsInArray(paginated.items, ['cvUrl', 'projectUrl']);
+  return { ...paginated, items: resolvedItems, courses, cities, areas, experienceYears };
 }
 
 async function downloadCv(recruiterId, studentId) {

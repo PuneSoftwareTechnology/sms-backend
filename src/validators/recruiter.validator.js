@@ -42,8 +42,10 @@ const candidateFilterQuerySchema = z.object({
   params: z.object({}).optional(),
   query: z.object({
     city: z.string().optional(),
+    area: z.string().optional(),
     course: z.string().optional(),
     minExperience: z.string().optional(),
+    maxExperience: z.string().optional(),
   }),
 });
 
