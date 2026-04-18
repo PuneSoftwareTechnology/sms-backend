@@ -75,7 +75,7 @@ function buildReceiptData(enrollmentId, enrollment, installmentNum) {
     institute: enrollment.institute,
     totalFee: Number(enrollment.total_fee),
     amountReceived: Number(amount),
-    pendingAmount: Number(enrollment.total_fee) - totalPaid,
+    pendingAmount: enrollment.completion_status === 'DROPOUT' ? 0 : Number(enrollment.total_fee) - totalPaid,
     installmentDate: date,
     paymentMode: mode,
   };

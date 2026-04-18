@@ -26,7 +26,7 @@ async function addPayment(payload) {
   }
 
   const paidAmount = await paymentRepository.sumPaidAmount(payload.enrollmentId);
-  const pendingAmount = Number(enrollment.total_fee) - paidAmount;
+  const pendingAmount = enrollment.completion_status === 'DROPOUT' ? 0 : Number(enrollment.total_fee) - paidAmount;
 
   emailService.sendPaymentReceiptEmail({
     to: enrollment.email,

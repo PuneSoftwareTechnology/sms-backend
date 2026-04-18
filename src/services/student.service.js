@@ -289,7 +289,7 @@ async function getMyFullProfile(studentId) {
     paymentSummary = {
       total_fee: Number(enrollment.total_fee || 0),
       paid_amount: paid,
-      pending_amount: Number(enrollment.total_fee || 0) - paid,
+      pending_amount: enrollment.completion_status === 'DROPOUT' ? 0 : Number(enrollment.total_fee || 0) - paid,
       qr_code_url: qrImageUrl,
       qr_bank_name: activeQr?.bank_name || "",
       qr_upi_id: activeQr?.upi_id || "",

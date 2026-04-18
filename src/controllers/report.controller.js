@@ -69,6 +69,21 @@ async function addBulkComment(req, res) {
   return ok(res, null, 'Comment added successfully');
 }
 
+async function downloadSingleCv(req, res) {
+  const { studentId } = req.params;
+  const cvs = await reportService.getCvKeysForDownload([studentId]);
+  if (!cvs.length) {
+    return res.status(404).json({ success: false, message: 'No CV found for this candidate' });
+  }
+  const cv = cvs[0];
+  const stream = await s3Service.getObjectStream(cv.fileKey);
+  const ext = cv.fileKey.split('.').pop() || 'pdf';
+  const fileName = `${cv.name.replace(/\s+/g, '_')}_CV.${ext}`;
+  res.setHeader('Content-Type', 'application/octet-stream');
+  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+  stream.pipe(res);
+}
+
 async function updateCandidateRemark(req, res) {
   const { enrollmentId } = req.params;
   const { studentId, remark } = req.body;
@@ -130,6 +145,6 @@ async function updatePlacementContact(req, res) {
   return ok(res, result, 'Placement contact updated');
 }
 
-export { candidateFilter, feeDue, enrollmentFigures, enquiryFigures, placementReport, updatePlacementContact, downloadBulkCvs, sendBulkEmail, addBulkComment, updateCandidateRemark };
+export { candidateFilter, feeDue, enrollmentFigures, enquiryFigures, placementReport, updatePlacementContact, downloadBulkCvs, downloadSingleCv, sendBulkEmail, addBulkComment, updateCandidateRemark };
 
-export default { candidateFilter, feeDue, enrollmentFigures, enquiryFigures, placementReport, updatePlacementContact, downloadBulkCvs, sendBulkEmail, addBulkComment, updateCandidateRemark };
+export default { candidateFilter, feeDue, enrollmentFigures, enquiryFigures, placementReport, updatePlacementContact, downloadBulkCvs, downloadSingleCv, sendBulkEmail, addBulkComment, updateCandidateRemark };

@@ -194,17 +194,38 @@ async function getRecruiterShortlist(recruiterId, filters = {}, client = pool) {
 async function getAdminRecruiterShortlist(filters = {}, client = pool) {
   const { page, limit, offset } = parsePagination(filters);
 
+  const whereConditions = [];
+  const whereValues = [];
+
+  if (filters.recruiter) {
+    whereValues.push(filters.recruiter);
+    whereConditions.push(`rs.recruiter_id = $${whereValues.length}`);
+  }
+  if (filters.course) {
+    whereValues.push(filters.course);
+    whereConditions.push(`rs.course = $${whereValues.length}`);
+  }
+  if (filters.year) {
+    whereValues.push(Number(filters.year));
+    whereConditions.push(`EXTRACT(YEAR FROM COALESCE(rs.shortlisted_at, rs.created_at)) = $${whereValues.length}`);
+  }
+
+  const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
   const countResult = await client.query(
-    'SELECT COUNT(*)::int AS total FROM recruiter_shortlists',
+    `SELECT COUNT(*)::int AS total FROM recruiter_shortlists rs ${whereClause}`,
+    whereValues,
   );
   const total = countResult.rows[0].total;
 
+  const dataValues = [...whereValues, limit, offset];
   const { rows } = await client.query(
     `
       SELECT
         rs.id,
         rs.recruiter_id   AS "recruiterId",
         ru.name            AS "recruiterName",
+        COALESCE(rp.company_name, '') AS "companyName",
         rs.course,
         u.name             AS "studentName",
         rs.student_id      AS "studentId",
@@ -212,12 +233,30 @@ async function getAdminRecruiterShortlist(filters = {}, client = pool) {
       FROM recruiter_shortlists rs
       JOIN users u  ON rs.student_id  = u.id
       JOIN users ru ON rs.recruiter_id = ru.id
+      LEFT JOIN recruiter_profiles rp ON rs.recruiter_id = rp.user_id
+      ${whereClause}
       ORDER BY COALESCE(rs.shortlisted_at, rs.created_at) DESC
-      LIMIT $1 OFFSET $2
+      LIMIT $${whereValues.length + 1} OFFSET $${whereValues.length + 2}
     `,
-    [limit, offset],
+    dataValues,
   );
-  return paginatedResult(rows, total, page, limit);
+
+  // Fetch distinct recruiters and courses for filter dropdowns
+  const recruitersResult = await client.query(
+    `SELECT DISTINCT rs.recruiter_id AS id, ru.name
+     FROM recruiter_shortlists rs
+     JOIN users ru ON rs.recruiter_id = ru.id
+     ORDER BY ru.name`,
+  );
+  const coursesResult = await client.query(
+    `SELECT DISTINCT course FROM recruiter_shortlists WHERE course IS NOT NULL ORDER BY course`,
+  );
+
+  return {
+    ...paginatedResult(rows, total, page, limit),
+    recruiters: recruitersResult.rows,
+    courses: coursesResult.rows.map((r) => r.course),
+  };
 }
 
 async function getDistinctCities(client = pool) {
@@ -293,7 +332,8 @@ async function createRecruiter(payload, client = pool) {
 async function findById(id, client = pool) {
   const { rows } = await client.query(
     `
-      SELECT u.id, u.name, u.email, u.phone, u.role, u.is_active, u.is_approved, rp.company_name, rp.designation 
+      SELECT u.id, u.name, u.email, u.phone, u.role, u.is_active, u.is_approved,
+             rp.company_name AS "companyName", rp.designation, u.last_login AS "lastLogin"
       FROM users u
       LEFT JOIN recruiter_profiles rp ON u.id = rp.user_id
       WHERE u.id = $1 AND u.role = 'RECRUITER'
@@ -313,7 +353,8 @@ async function listAllRecruiters(filters = {}, client = pool) {
 
   const { rows } = await client.query(
     `
-      SELECT u.id, u.name, u.email, u.phone, u.is_active, u.is_approved, u.created_at, rp.company_name, rp.designation
+      SELECT u.id, u.name, u.email, u.phone, u.is_active, u.is_approved, u.created_at,
+             rp.company_name AS "companyName", rp.designation, u.last_login AS "lastLogin"
       FROM users u
       LEFT JOIN recruiter_profiles rp ON u.id = rp.user_id
       WHERE u.role = 'RECRUITER'

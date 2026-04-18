@@ -40,6 +40,7 @@ async function getPendingDues(client = pool) {
      ), 0)::numeric AS "pendingDues"
      FROM enrollments e
      WHERE e.deleted = FALSE
+       AND e.completion_status != 'DROPOUT'
        AND (e.total_fee - COALESCE(e.installment1_amount, 0) - COALESCE(e.installment2_amount, 0) - COALESCE(e.installment3_amount, 0)) > 0`,
   );
   return Number(rows[0].pendingDues);

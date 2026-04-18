@@ -210,6 +210,10 @@ router.get(
   validate(candidateFilterReportSchema),
   asyncHandler(reportController.candidateFilter),
 );
+router.get(
+  "/reports/candidates/:studentId/cv",
+  asyncHandler(reportController.downloadSingleCv),
+);
 router.post(
   "/reports/candidates/download-cvs",
   asyncHandler(reportController.downloadBulkCvs),
