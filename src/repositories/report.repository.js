@@ -4,7 +4,7 @@ import { parsePagination, paginatedResult } from '../validators/common.validator
 async function candidateFilterReport(filters = {}, client = pool) {
   const { page, limit, offset } = parsePagination(filters);
   const values = [];
-  const conditions = ["u.role = 'STUDENT'", "e.deleted = FALSE"];
+  const conditions = ["u.role = 'STUDENT'", "e.deleted = FALSE", "e.completion_status != 'DROPOUT'"];
 
   if (filters.city && filters.city !== 'ALL') {
     values.push(filters.city);
@@ -65,9 +65,12 @@ async function candidateFilterReport(filters = {}, client = pool) {
       SELECT
         u.id,
         u.name,
+        u.phone,
         e.course,
         e.id                                         AS "enrollmentId",
+        e.completion_status                          AS "completionStatus",
         sp.city,
+        sp.area,
         COALESCE(sp.it_exp_years, 0)::int           AS "itExperienceYears",
         COALESCE(ts.marks_scored, 0)::int            AS "technicalMarksScored",
         COALESCE(ts.total_marks, 0)::int             AS "technicalTotalMarks",
@@ -185,12 +188,15 @@ async function feeDueReport(filters = {}, client = pool) {
       SELECT
         e.id            AS "id",
         u.name          AS "name",
+        e.institute     AS "institute",
         e.course        AS "course",
         e.completion_status AS "completionStatus",
         u.phone         AS "phone",
         e.total_fee     AS "totalFee",
         (COALESCE(e.installment1_amount, 0) + COALESCE(e.installment2_amount, 0) + COALESCE(e.installment3_amount, 0))::numeric AS "paidAmount",
-        (e.total_fee - COALESCE(e.installment1_amount, 0) - COALESCE(e.installment2_amount, 0) - COALESCE(e.installment3_amount, 0))::numeric AS "pendingAmount",
+        CASE WHEN e.completion_status = 'DROPOUT' THEN 0
+             ELSE (e.total_fee - COALESCE(e.installment1_amount, 0) - COALESCE(e.installment2_amount, 0) - COALESCE(e.installment3_amount, 0))::numeric
+        END AS "pendingAmount",
         COALESCE(
           CURRENT_DATE - GREATEST(e.installment1_date, e.installment2_date, e.installment3_date),
           CURRENT_DATE - e.start_date::date

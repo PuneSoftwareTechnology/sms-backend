@@ -7,7 +7,10 @@ const enquiryBody = z.object({
     .optional(),
   name: z.string().min(2),
   phone: z.string().min(7),
-  email: z.string().email().optional(),
+  email: z
+    .string()
+    .transform((v) => (v === "" ? undefined : v))
+    .pipe(z.string().email().optional()),
   course: z.string().optional(),
   institute: z.string().optional(),
   leadStatus: z.string().optional(),
