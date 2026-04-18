@@ -164,7 +164,9 @@ async function getRecruiterShortlist(recruiterId, filters = {}, client = pool) {
   const { page, limit, offset } = parsePagination(filters);
 
   const countResult = await client.query(
-    'SELECT COUNT(*)::int AS total FROM recruiter_shortlists WHERE recruiter_id = $1',
+    `SELECT COUNT(*)::int AS total FROM recruiter_shortlists rs
+     JOIN enrollments e ON e.student_id = rs.student_id AND e.deleted = FALSE
+     WHERE rs.recruiter_id = $1`,
     [recruiterId],
   );
   const total = countResult.rows[0].total;
@@ -182,6 +184,7 @@ async function getRecruiterShortlist(recruiterId, filters = {}, client = pool) {
       FROM recruiter_shortlists rs
       JOIN users u  ON rs.student_id  = u.id
       JOIN users ru ON rs.recruiter_id = ru.id
+      JOIN enrollments e ON e.student_id = rs.student_id AND e.deleted = FALSE
       WHERE rs.recruiter_id = $1
       ORDER BY COALESCE(rs.shortlisted_at, rs.created_at) DESC
       LIMIT $2 OFFSET $3
@@ -213,7 +216,9 @@ async function getAdminRecruiterShortlist(filters = {}, client = pool) {
   const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
   const countResult = await client.query(
-    `SELECT COUNT(*)::int AS total FROM recruiter_shortlists rs ${whereClause}`,
+    `SELECT COUNT(*)::int AS total FROM recruiter_shortlists rs
+     JOIN enrollments e ON e.student_id = rs.student_id AND e.deleted = FALSE
+     ${whereClause}`,
     whereValues,
   );
   const total = countResult.rows[0].total;
@@ -234,6 +239,7 @@ async function getAdminRecruiterShortlist(filters = {}, client = pool) {
       JOIN users u  ON rs.student_id  = u.id
       JOIN users ru ON rs.recruiter_id = ru.id
       LEFT JOIN recruiter_profiles rp ON rs.recruiter_id = rp.user_id
+      JOIN enrollments e ON e.student_id = rs.student_id AND e.deleted = FALSE
       ${whereClause}
       ORDER BY COALESCE(rs.shortlisted_at, rs.created_at) DESC
       LIMIT $${whereValues.length + 1} OFFSET $${whereValues.length + 2}

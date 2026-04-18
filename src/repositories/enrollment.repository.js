@@ -71,7 +71,7 @@ async function findEnrollmentDetailsById(enrollmentId, client = pool) {
       SELECT e.*, u.name, u.email, u.phone
       FROM enrollments e
       LEFT JOIN users u ON e.student_id = u.id
-      WHERE e.id = $1
+      WHERE e.id = $1 AND e.deleted = FALSE
     `,
     [enrollmentId],
   );
@@ -80,7 +80,7 @@ async function findEnrollmentDetailsById(enrollmentId, client = pool) {
 
 async function updateBatchEndDate(batch, endDate, client = pool) {
   await client.query(
-    "UPDATE enrollments SET end_date = $1, updated_at = NOW() WHERE batch = $2",
+    "UPDATE enrollments SET end_date = $1, updated_at = NOW() WHERE batch = $2 AND deleted = FALSE",
     [endDate, batch],
   );
 }
@@ -89,7 +89,7 @@ async function findByEmail(email, client = pool) {
   const { rows } = await client.query(
     `SELECT e.* FROM enrollments e
      JOIN users u ON e.student_id = u.id
-     WHERE u.email = $1 LIMIT 1`,
+     WHERE u.email = $1 AND e.deleted = FALSE LIMIT 1`,
     [email],
   );
   return rows[0] || null;
@@ -97,7 +97,7 @@ async function findByEmail(email, client = pool) {
 
 async function getDistinctCourses(client = pool) {
   const { rows } = await client.query(
-    "SELECT DISTINCT course FROM enrollments WHERE course IS NOT NULL ORDER BY course",
+    "SELECT DISTINCT course FROM enrollments WHERE course IS NOT NULL AND deleted = FALSE ORDER BY course",
   );
   return rows.map((r) => r.course);
 }
@@ -162,7 +162,7 @@ async function updateEnrollment(id, payload, client = pool) {
   values.push(id);
 
   const { rows } = await client.query(
-    `UPDATE enrollments SET ${fields.join(", ")} WHERE id = $${values.length} RETURNING *`,
+    `UPDATE enrollments SET ${fields.join(", ")} WHERE id = $${values.length} AND deleted = FALSE RETURNING *`,
     values,
   );
   return rows[0] || null;
@@ -191,7 +191,7 @@ async function softDeleteEnrollment(id, client = pool) {
 
 async function markBatchCompleted(batch, client = pool) {
   await client.query(
-    "UPDATE enrollments SET completion_status = 'COMPLETED', updated_at = NOW() WHERE batch = $1",
+    "UPDATE enrollments SET completion_status = 'COMPLETED', updated_at = NOW() WHERE batch = $1 AND deleted = FALSE",
     [batch],
   );
 }
