@@ -190,6 +190,7 @@ async function feeDueReport(filters = {}, client = pool) {
         u.name          AS "name",
         e.institute     AS "institute",
         e.course        AS "course",
+        e.trainer       AS "trainer",
         e.completion_status AS "completionStatus",
         u.phone         AS "phone",
         e.total_fee     AS "totalFee",
