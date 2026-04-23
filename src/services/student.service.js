@@ -7,6 +7,7 @@ import enrollmentRepository from "../repositories/enrollment.repository.js";
 import paymentRepository from "../repositories/payment.repository.js";
 import s3Service from "../utils/s3.service.js";
 import cvTemplateService from "./cvTemplate.service.js";
+import env from "../config/env.js";
 
 async function resolveProfileUrls(profile) {
   return s3Service.resolvePresignedUrls(profile, ['profilePhoto']);
@@ -218,15 +219,36 @@ async function getMyFullProfile(studentId) {
   // Resolve profile photo presigned URL
   const resolvedProfile = await resolveProfileUrls(profile);
 
-  // Resolve certificate presigned URLs inside certifications JSON
+  // Resolve certificate presigned URLs inside certifications JSON.
+  // IMPORTANT: preserve the raw S3 key in `certificate` and expose the signed URL
+  // as a sibling `certificateDisplayUrl`. Overwriting `certificate` with the URL
+  // caused edits to round-trip a 1000+ char URL back into the DB, which later
+  // triggered an S3 KeyTooLongError on re-signing.
   if (resolvedProfile.certifications?.length) {
     resolvedProfile.certifications = await Promise.all(
       resolvedProfile.certifications.map(async (cert) => {
-        const c = typeof cert === 'string' ? { name: cert } : cert;
-        return {
-          ...c,
-          certificate: c.certificate ? await s3Service.resolvePresignedUrl(c.certificate) : undefined,
-        };
+        const c = typeof cert === 'string' ? { name: cert } : { ...cert };
+        if (!c.certificate) return c;
+        // Self-heal rows corrupted by the prior bug: if the stored value is a URL,
+        // recover the S3 key from its path (the portion before '?').
+        const stored = String(c.certificate);
+        const isUrl = /^https?:\/\//i.test(stored);
+        let key = stored;
+        if (isUrl) {
+          try {
+            const u = new URL(stored);
+            key = decodeURIComponent(u.pathname.replace(/^\/+/, ''));
+            // Strip leading bucket segment if path-style URL (bucket/key)
+            if (env.s3Bucket && key.startsWith(`${env.s3Bucket}/`)) {
+              key = key.slice(env.s3Bucket.length + 1);
+            }
+          } catch {
+            key = stored;
+          }
+        }
+        c.certificate = key;
+        c.certificateDisplayUrl = await s3Service.resolvePresignedUrl(key);
+        return c;
       }),
     );
   }

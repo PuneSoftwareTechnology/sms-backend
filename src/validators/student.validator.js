@@ -27,7 +27,12 @@ const updateProfileSchema = z.object({
     nonItExperienceMonths: z.coerce.number().min(0).max(11).optional(),
     certifications: z.array(z.object({
       name: z.string().min(1),
-      certificate: z.string().optional(),
+      // S3 key only — never a URL. S3 enforces 1024 chars; we cap below that and
+      // reject anything resembling a URL so a resolved link can't round-trip back in.
+      certificate: z.string().max(512).refine(
+        (v) => !/^https?:\/\//i.test(v),
+        { message: 'certificate must be an S3 key, not a URL' },
+      ).optional(),
     })).optional(),
   }),
   params: z.object({}).optional(),
