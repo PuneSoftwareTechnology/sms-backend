@@ -75,7 +75,7 @@ async function findCandidates(filters = {}, recruiterId, client = pool) {
                SUM(a.total_marks)::int AS total_marks
         FROM attempts a
         JOIN tests t ON a.test_id = t.id
-        WHERE a.status IN ('submitted', 'expired')
+        WHERE a.status IN ('submitted', 'expired') AND a.reset_at IS NULL
         GROUP BY a.user_id, t.course
       ) ts ON ts.user_id = u.id AND ts.course = e.course
       LEFT JOIN project_submissions ps ON ps.student_id = u.id

@@ -39,6 +39,7 @@ import {
   userIdParamSchema,
   enrollmentIdParamSchema,
   evaluationIdParamSchema,
+  testStudentParamSchema,
 } from "../validators/common.validator.js";
 
 const router = express.Router();
@@ -127,6 +128,11 @@ router.get(
   "/tests/:id/attempts",
   validate(uuidIdParamSchema),
   asyncHandler(testController.getTestAttempts),
+);
+router.post(
+  "/tests/:testId/students/:studentId/reset-attempt",
+  validate(testStudentParamSchema),
+  asyncHandler(testController.resetAttempt),
 );
 router.post(
   "/tests/:id/questions",

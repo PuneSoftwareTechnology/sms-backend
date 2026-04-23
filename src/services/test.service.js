@@ -114,6 +114,16 @@ async function getTestAttempts(testId, filters = {}) {
   return testRepository.findAttemptsByTestId(testId, filters);
 }
 
+async function resetAttempt(testId, studentId, adminId) {
+  const test = await testRepository.findById(testId);
+  if (!test) throw new ApiError(404, 'Test not found');
+
+  const reset = await testRepository.resetAttempt(studentId, testId, adminId);
+  if (!reset) throw new ApiError(404, 'No active attempt found for this student');
+
+  return { id: reset.id };
+}
+
 // ─── Student Functions ───────────────────────────────────────
 
 async function getAvailableTests(studentId) {
@@ -268,6 +278,7 @@ export {
   togglePublish,
   deleteTest,
   getTestAttempts,
+  resetAttempt,
   getAvailableTests,
   startTest,
   submitTest,
@@ -284,6 +295,7 @@ export default {
   togglePublish,
   deleteTest,
   getTestAttempts,
+  resetAttempt,
   getAvailableTests,
   startTest,
   submitTest,

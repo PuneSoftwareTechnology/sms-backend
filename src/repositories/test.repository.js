@@ -56,10 +56,17 @@ async function findAllTests(filters = {}, client = pool) {
             t.is_active AS "isActive",
             t.is_published AS "isPublished",
             t.created_at AS "createdAt",
-            COUNT(q.id)::int AS "questionCount"
+            COALESCE(qc.cnt, 0)::int AS "questionCount",
+            COALESCE(ac.cnt, 0)::int AS "attemptCount"
      FROM tests t
-     LEFT JOIN questions q ON q.test_id = t.id
-     GROUP BY t.id
+     LEFT JOIN (
+       SELECT test_id, COUNT(*) AS cnt FROM questions GROUP BY test_id
+     ) qc ON qc.test_id = t.id
+     LEFT JOIN (
+       SELECT test_id, COUNT(*) AS cnt FROM attempts
+       WHERE status IN ('submitted', 'expired') AND reset_at IS NULL
+       GROUP BY test_id
+     ) ac ON ac.test_id = t.id
      ORDER BY t.created_at DESC
      LIMIT $1 OFFSET $2`,
     [limit, offset],
@@ -289,8 +296,21 @@ async function findAttemptByUserAndTest(userId, testId, client = pool) {
             start_time AS "startTime", expiry_time AS "expiryTime",
             score, total_marks AS "totalMarks", status,
             submitted_at AS "submittedAt"
-     FROM attempts WHERE user_id = $1 AND test_id = $2 LIMIT 1`,
+     FROM attempts
+     WHERE user_id = $1 AND test_id = $2 AND reset_at IS NULL
+     LIMIT 1`,
     [userId, testId],
+  );
+  return rows[0] || null;
+}
+
+async function resetAttempt(userId, testId, resetBy, client = pool) {
+  const { rows } = await client.query(
+    `UPDATE attempts
+     SET reset_at = NOW(), reset_by = $3
+     WHERE user_id = $1 AND test_id = $2 AND reset_at IS NULL
+     RETURNING id`,
+    [userId, testId, resetBy],
   );
   return rows[0] || null;
 }
@@ -407,7 +427,7 @@ async function ensureEvaluationExists(studentId, client = pool) {
 
 async function findAttemptByTestAndStudent(testId, studentId, client = pool) {
   const { rows } = await client.query(
-    'SELECT id FROM attempts WHERE test_id = $1 AND user_id = $2 LIMIT 1',
+    'SELECT id FROM attempts WHERE test_id = $1 AND user_id = $2 AND reset_at IS NULL LIMIT 1',
     [testId, studentId],
   );
   return rows[0] || null;
@@ -458,7 +478,7 @@ async function findAttemptedTestIdsByUser(userId, testIds, client = pool) {
   if (!testIds.length) return new Set();
   const { rows } = await client.query(
     `SELECT test_id AS "testId" FROM attempts
-     WHERE user_id = $1 AND test_id = ANY($2::uuid[])`,
+     WHERE user_id = $1 AND test_id = ANY($2::uuid[]) AND reset_at IS NULL`,
     [userId, testIds],
   );
   return new Set(rows.map(r => r.testId));
@@ -489,6 +509,7 @@ export {
   findAttemptById,
   submitAttempt,
   expireAttempt,
+  resetAttempt,
   saveAnswer,
   findAnswersByAttemptId,
   findAttemptsByTestId,
@@ -522,6 +543,7 @@ export default {
   findAttemptById,
   submitAttempt,
   expireAttempt,
+  resetAttempt,
   saveAnswer,
   findAnswersByAttemptId,
   findAttemptsByTestId,

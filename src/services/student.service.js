@@ -208,6 +208,7 @@ async function getMyFullProfile(studentId) {
       score: ts.score,
       totalMarks: ts.totalMarks,
       submittedAt: ts.submittedAt,
+      attemptCount: ts.attemptCount,
     });
   }
   for (const ev of evaluations) {

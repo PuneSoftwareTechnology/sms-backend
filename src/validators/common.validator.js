@@ -24,6 +24,15 @@ const qrIdParamSchema = z.object({
   query: z.object({}).optional(),
 });
 
+const testStudentParamSchema = z.object({
+  body: z.object({}).optional(),
+  params: z.object({
+    testId: z.string().uuid(),
+    studentId: z.string().uuid(),
+  }),
+  query: z.object({}).optional(),
+});
+
 const evaluationIdParamSchema = z.object({
   body: z.object({
     communicationScore: z.number().min(0).max(10).optional(),
@@ -54,5 +63,5 @@ function paginatedResult(rows, total, page, limit) {
   return { items: rows, total, page, totalPages: Math.ceil(total / limit) };
 }
 
-export { uuidIdParamSchema, userIdParamSchema, enrollmentIdParamSchema, qrIdParamSchema, evaluationIdParamSchema, paginationQuerySchema, parsePagination, paginatedResult };
-export default { uuidIdParamSchema, userIdParamSchema, enrollmentIdParamSchema, qrIdParamSchema, evaluationIdParamSchema, paginationQuerySchema, parsePagination, paginatedResult };
+export { uuidIdParamSchema, userIdParamSchema, enrollmentIdParamSchema, qrIdParamSchema, evaluationIdParamSchema, testStudentParamSchema, paginationQuerySchema, parsePagination, paginatedResult };
+export default { uuidIdParamSchema, userIdParamSchema, enrollmentIdParamSchema, qrIdParamSchema, evaluationIdParamSchema, testStudentParamSchema, paginationQuerySchema, parsePagination, paginatedResult };

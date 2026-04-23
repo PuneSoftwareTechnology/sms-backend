@@ -211,7 +211,7 @@ async function findEvaluationsByStudentId(studentId, client = pool) {
               SUM(a.total_marks)::int AS total_marks
        FROM attempts a
        JOIN tests t ON a.test_id = t.id
-       WHERE a.status IN ('submitted', 'expired')
+       WHERE a.status IN ('submitted', 'expired') AND a.reset_at IS NULL
        GROUP BY a.user_id, t.course
      ) ts ON ts.user_id = ev.student_id AND ts.course = e.course
      WHERE ev.student_id = $1 AND e.deleted = FALSE
@@ -229,10 +229,17 @@ async function findTestScoresByStudentId(studentId, client = pool) {
        t.course,
        a.score,
        a.total_marks AS "totalMarks",
-       a.submitted_at AS "submittedAt"
+       a.submitted_at AS "submittedAt",
+       (
+         SELECT COUNT(*)::int
+         FROM attempts a2
+         WHERE a2.user_id = a.user_id
+           AND a2.test_id = a.test_id
+           AND a2.status IN ('submitted', 'expired')
+       ) AS "attemptCount"
      FROM attempts a
      JOIN tests t ON a.test_id = t.id
-     WHERE a.user_id = $1 AND a.status IN ('submitted', 'expired')
+     WHERE a.user_id = $1 AND a.status IN ('submitted', 'expired') AND a.reset_at IS NULL
      ORDER BY t.course, a.submitted_at ASC`,
     [studentId],
   );

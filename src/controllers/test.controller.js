@@ -38,6 +38,15 @@ async function getTestAttempts(req, res) {
   return ok(res, attempts, 'Test attempts fetched');
 }
 
+async function resetAttempt(req, res) {
+  const result = await testService.resetAttempt(
+    req.params.testId,
+    req.params.studentId,
+    req.user.id,
+  );
+  return ok(res, result, 'Test attempt reset');
+}
+
 async function addQuestion(req, res) {
   const question = await testService.addQuestion(req.params.id, req.validated.body);
   return ok(res, question, 'Question created', 201);
@@ -84,6 +93,7 @@ export {
   togglePublish,
   deleteTest,
   getTestAttempts,
+  resetAttempt,
   addQuestion,
   updateQuestion,
   deleteQuestion,
@@ -100,6 +110,7 @@ export default {
   togglePublish,
   deleteTest,
   getTestAttempts,
+  resetAttempt,
   addQuestion,
   updateQuestion,
   deleteQuestion,

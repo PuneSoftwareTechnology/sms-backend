@@ -485,7 +485,7 @@ async function getTechScoreByCourse(client = pool) {
               ELSE 0 END AS pct
        FROM attempts a
        JOIN tests t ON a.test_id = t.id
-       WHERE a.status IN ('submitted', 'expired')
+       WHERE a.status IN ('submitted', 'expired') AND a.reset_at IS NULL
        GROUP BY t.course, a.user_id
      ) sub
      GROUP BY sub.course`,

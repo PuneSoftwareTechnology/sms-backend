@@ -209,9 +209,14 @@ CREATE TABLE IF NOT EXISTS attempts (
   score INT DEFAULT 0,
   total_marks INT DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'submitted', 'expired')),
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT uq_attempt_once UNIQUE (user_id, test_id)
+  reset_at TIMESTAMP,
+  reset_by UUID REFERENCES users(id),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Only one active (non-reset) attempt per user+test; reset rows kept for audit history.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_attempt_active
+  ON attempts (user_id, test_id) WHERE reset_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS answers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
