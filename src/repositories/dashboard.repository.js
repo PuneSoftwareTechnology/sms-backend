@@ -164,12 +164,17 @@ async function getActiveEnrollments(client = pool) {
 
 async function getNewEnrollments(period = 'current', client = pool) {
   const dateExpr = period === 'current'
-    ? `e.created_at >= DATE_TRUNC('month', CURRENT_DATE) AND e.created_at < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'`
-    : `e.created_at >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month' AND e.created_at < DATE_TRUNC('month', CURRENT_DATE)`;
+    ? `fp.first_payment_date >= DATE_TRUNC('month', CURRENT_DATE) AND fp.first_payment_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'`
+    : `fp.first_payment_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month' AND fp.first_payment_date < DATE_TRUNC('month', CURRENT_DATE)`;
 
   const { rows } = await client.query(
     `SELECT COUNT(*)::int AS "count"
      FROM enrollments e
+     JOIN (
+       SELECT enrollment_id, MIN(payment_date) AS first_payment_date
+       FROM payments
+       GROUP BY enrollment_id
+     ) fp ON fp.enrollment_id = e.id
      WHERE e.deleted = FALSE AND ${dateExpr}`,
   );
   return rows[0].count;
@@ -179,16 +184,20 @@ async function getEnrollmentTrend(client = pool) {
   const { rows } = await client.query(
     `SELECT
        TO_CHAR(d.month, 'Mon YYYY') AS "label",
-       COUNT(e.id)::int AS "value"
+       COUNT(fp.enrollment_id)::int AS "value"
      FROM generate_series(
        DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '11 months',
        DATE_TRUNC('month', CURRENT_DATE),
        INTERVAL '1 month'
      ) AS d(month)
-     LEFT JOIN enrollments e
-       ON e.deleted = FALSE
-       AND e.created_at >= d.month
-       AND e.created_at < d.month + INTERVAL '1 month'
+     LEFT JOIN (
+       SELECT p.enrollment_id, MIN(p.payment_date) AS first_payment_date
+       FROM payments p
+       JOIN enrollments e ON e.id = p.enrollment_id AND e.deleted = FALSE
+       GROUP BY p.enrollment_id
+     ) fp
+       ON fp.first_payment_date >= d.month
+       AND fp.first_payment_date < d.month + INTERVAL '1 month'
      GROUP BY d.month
      ORDER BY d.month`,
   );
