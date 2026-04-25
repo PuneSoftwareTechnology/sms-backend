@@ -280,6 +280,15 @@ CREATE TABLE IF NOT EXISTS recruiter_shortlists (
 
 ALTER TABLE recruiter_shortlists ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
+DO $$ BEGIN
+  ALTER TABLE recruiter_shortlists
+    ADD CONSTRAINT recruiter_shortlists_recruiter_student_course_key
+    UNIQUE (recruiter_id, student_id, course);
+EXCEPTION
+  WHEN duplicate_object THEN null;
+  WHEN duplicate_table THEN null;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_enrollments_course ON enrollments(course);
 CREATE INDEX IF NOT EXISTS idx_enrollments_batch ON enrollments(batch);

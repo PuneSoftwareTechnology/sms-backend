@@ -12,6 +12,13 @@ async function filterCandidates(req, res) {
     maxExperience: req.query.maxExperience
       ? Number(req.query.maxExperience)
       : undefined,
+    minTechnicalScore: req.query.minTechnicalScore
+      ? Number(req.query.minTechnicalScore)
+      : undefined,
+    minCommunicationScore: req.query.minCommunicationScore
+      ? Number(req.query.minCommunicationScore)
+      : undefined,
+    shortlistedOnly: req.query.shortlistedOnly === 'true',
     page: req.query.page,
     limit: req.query.limit,
   };
@@ -110,6 +117,12 @@ async function sendEmailToStudent(req, res) {
   return ok(res, result, "Email sent successfully");
 }
 
+async function bulkSendEmail(req, res) {
+  const { studentIds, subject, body } = req.validated.body;
+  const result = await recruiterService.sendBulkEmailToStudents(req.user.id, studentIds, subject, body);
+  return ok(res, result, `Email sent to ${result.sent ?? result.total} candidates`);
+}
+
 export {
   filterCandidates,
   downloadCv,
@@ -127,6 +140,7 @@ export {
   deleteRecruiter,
   getAllRecruiters,
   sendEmailToStudent,
+  bulkSendEmail,
 };
 
 export default {
@@ -146,4 +160,5 @@ export default {
   deleteRecruiter,
   getAllRecruiters,
   sendEmailToStudent,
+  bulkSendEmail,
 };

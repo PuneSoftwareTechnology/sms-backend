@@ -185,6 +185,22 @@ async function sendEmailToStudent(recruiterId, studentId, subject, body) {
   return { sent: true };
 }
 
+async function sendBulkEmailToStudents(recruiterId, studentIds, subject, body) {
+  const recipients = [];
+  for (const id of studentIds) {
+    const student = await userRepository.findById(id);
+    if (student?.email) {
+      recipients.push({ name: student.name, email: student.email });
+    }
+  }
+  if (recipients.length === 0) {
+    throw new ApiError(404, "No valid recipients found");
+  }
+  const { sendBulkCustomEmail } = await import('./email.service.js');
+  const result = await sendBulkCustomEmail({ recipients, subject, body });
+  return { ...result, total: recipients.length };
+}
+
 export {
   filterCandidates,
   downloadCv,
@@ -200,6 +216,7 @@ export {
   deleteRecruiter,
   getAllRecruiters,
   sendEmailToStudent,
+  sendBulkEmailToStudents,
 };
 
 export default {
@@ -217,4 +234,5 @@ export default {
   deleteRecruiter,
   getAllRecruiters,
   sendEmailToStudent,
+  sendBulkEmailToStudents,
 };

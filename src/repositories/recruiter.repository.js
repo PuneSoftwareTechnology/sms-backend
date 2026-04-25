@@ -28,17 +28,52 @@ async function findCandidates(filters = {}, recruiterId, client = pool) {
     filterValues.push(filters.maxExperience);
     conditions.push(`COALESCE(sp.it_exp_years, 0) <= $${filterValues.length}`);
   }
+  if (filters.minTechnicalScore !== undefined) {
+    filterValues.push(filters.minTechnicalScore);
+    conditions.push(
+      `(CASE WHEN COALESCE(ts.total_marks, 0) > 0
+             THEN (ts.marks_scored::numeric / ts.total_marks) * 100
+             ELSE 0 END) >= $${filterValues.length}`,
+    );
+  }
+  if (filters.minCommunicationScore !== undefined) {
+    filterValues.push(filters.minCommunicationScore);
+    conditions.push(`COALESCE(ev.communication_score, 0) >= $${filterValues.length}`);
+  }
+  if (filters.shortlistedOnly) {
+    conditions.push('rs.id IS NOT NULL');
+  }
 
   const whereClause = conditions.join(" AND ");
 
-  // Count query — no recruiterId needed
+  // Shared FROM clause — joins for ts/ev are needed by both count and main queries
+  // because score filters may reference them. LEFT JOINs are 1:1 here so they don't
+  // multiply rows.
+  const fromClause = `
+    FROM users u
+    LEFT JOIN student_profiles sp ON u.id = sp.user_id
+    LEFT JOIN enrollments e ON u.id = e.student_id AND e.deleted = FALSE
+    LEFT JOIN evaluations ev ON ev.enrollment_id = e.id
+    LEFT JOIN (
+      SELECT a.user_id, t.course,
+             SUM(a.score)::int       AS marks_scored,
+             SUM(a.total_marks)::int AS total_marks
+      FROM attempts a
+      JOIN tests t ON a.test_id = t.id
+      WHERE a.status IN ('submitted', 'expired') AND a.reset_at IS NULL
+      GROUP BY a.user_id, t.course
+    ) ts ON ts.user_id = u.id AND ts.course = e.course
+  `;
+
+  // Count query — recruiterId is appended last so the rs join can reference it
+  const countValues = [...filterValues, recruiterId];
+  const countRsJoin = `
+    LEFT JOIN recruiter_shortlists rs
+      ON rs.student_id = u.id AND rs.recruiter_id = $${countValues.length} AND rs.course = e.course
+  `;
   const countResult = await client.query(
-    `SELECT COUNT(*)::int AS total
-     FROM users u
-     LEFT JOIN student_profiles sp ON u.id = sp.user_id
-     LEFT JOIN enrollments e ON u.id = e.student_id AND e.deleted = FALSE
-     WHERE ${whereClause}`,
-    filterValues,
+    `SELECT COUNT(*)::int AS total ${fromClause} ${countRsJoin} WHERE ${whereClause}`,
+    countValues,
   );
   const total = countResult.rows[0].total;
 
@@ -63,21 +98,10 @@ async function findCandidates(filters = {}, recruiterId, client = pool) {
         COALESCE(ev.communication_score, 0)::numeric AS "communicationScore",
         cv.file_url                   AS "cvUrl",
         ps.file_url                   AS "projectUrl",
-        CASE WHEN rs.id IS NOT NULL THEN true ELSE false END AS "isShortlisted"
-      FROM users u
-      LEFT JOIN student_profiles sp ON u.id = sp.user_id
-      LEFT JOIN enrollments e ON u.id = e.student_id AND e.deleted = FALSE
+        CASE WHEN rs.id IS NOT NULL THEN true ELSE false END AS "isShortlisted",
+        rs.created_at                 AS "shortlistedAt"
+      ${fromClause}
       LEFT JOIN cvs cv ON u.id = cv.student_id
-      LEFT JOIN evaluations ev ON ev.enrollment_id = e.id
-      LEFT JOIN (
-        SELECT a.user_id, t.course,
-               SUM(a.score)::int       AS marks_scored,
-               SUM(a.total_marks)::int AS total_marks
-        FROM attempts a
-        JOIN tests t ON a.test_id = t.id
-        WHERE a.status IN ('submitted', 'expired') AND a.reset_at IS NULL
-        GROUP BY a.user_id, t.course
-      ) ts ON ts.user_id = u.id AND ts.course = e.course
       LEFT JOIN project_submissions ps ON ps.student_id = u.id
       LEFT JOIN recruiter_shortlists rs
         ON rs.student_id = u.id AND rs.recruiter_id = $1 AND rs.course = e.course

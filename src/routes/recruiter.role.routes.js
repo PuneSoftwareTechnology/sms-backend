@@ -5,7 +5,7 @@ import authMiddleware from '../middlewares/auth.middleware.js';
 import authorizeRoles from '../middlewares/authorize.middleware.js';
 import recruiterController from '../controllers/recruiter.controller.js';
 import studentController from '../controllers/student.controller.js';
-import { studentIdParamSchema, shortlistParamSchema, candidateFilterQuerySchema, bulkShortlistSchema, bulkRemoveShortlistSchema, sendEmailSchema } from '../validators/recruiter.validator.js';
+import { studentIdParamSchema, shortlistParamSchema, candidateFilterQuerySchema, bulkShortlistSchema, bulkRemoveShortlistSchema, sendEmailSchema, bulkSendEmailSchema } from '../validators/recruiter.validator.js';
 import { userIdParamSchema } from '../validators/common.validator.js';
 
 const router = express.Router();
@@ -21,6 +21,7 @@ router.post('/candidates/:studentId/shortlist', validate(shortlistParamSchema), 
 router.post('/candidates/bulk-remove-shortlist', validate(bulkRemoveShortlistSchema), asyncHandler(recruiterController.bulkRemoveShortlist));
 router.delete('/candidates/:studentId/shortlist', validate(studentIdParamSchema), asyncHandler(recruiterController.removeShortlist));
 router.post('/candidates/:studentId/send-email', validate(sendEmailSchema), asyncHandler(recruiterController.sendEmailToStudent));
+router.post('/candidates/bulk-send-email', validate(bulkSendEmailSchema), asyncHandler(recruiterController.bulkSendEmail));
 router.get('/students/:userId/profile', validate(userIdParamSchema), asyncHandler(studentController.getStudentProfile));
 
 export default router;

@@ -46,6 +46,11 @@ const candidateFilterQuerySchema = z.object({
     course: z.string().optional(),
     minExperience: z.string().optional(),
     maxExperience: z.string().optional(),
+    minTechnicalScore: z.string().optional(),
+    minCommunicationScore: z.string().optional(),
+    shortlistedOnly: z.enum(['true', 'false']).optional(),
+    page: z.string().optional(),
+    limit: z.string().optional(),
   }),
 });
 
@@ -77,6 +82,16 @@ const sendEmailSchema = z.object({
   query: z.object({}).optional(),
 });
 
+const bulkSendEmailSchema = z.object({
+  body: z.object({
+    studentIds: z.array(z.string().uuid()).min(1).max(50),
+    subject: z.string().min(1).max(200),
+    body: z.string().min(1).max(5000),
+  }),
+  params: z.object({}).optional(),
+  query: z.object({}).optional(),
+});
+
 const updateRecruiterSchema = z.object({
   body: z.object({
     name: z.string().min(2).optional(),
@@ -100,6 +115,7 @@ export {
   bulkShortlistSchema,
   bulkRemoveShortlistSchema,
   sendEmailSchema,
+  bulkSendEmailSchema,
 };
 export default {
   studentIdParamSchema,
@@ -112,4 +128,5 @@ export default {
   bulkShortlistSchema,
   bulkRemoveShortlistSchema,
   sendEmailSchema,
+  bulkSendEmailSchema,
 };
