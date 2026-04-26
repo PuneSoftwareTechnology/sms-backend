@@ -66,6 +66,16 @@ function formatINR(amount) {
   return 'Rs.' + Number(amount).toLocaleString('en-IN');
 }
 
+// HDFC and ICICI are bank accounts the institute receives transfers into;
+// the student-facing receipt shows them as "ONLINE" while the raw value is
+// retained in DB/SMS records for internal reconciliation.
+function formatPaymentMode(mode) {
+  if (!mode) return 'Cash / UPI / Cheque / Bank Transfer Transaction';
+  if (mode === 'CASH') return 'Cash';
+  if (mode === 'HDFC' || mode === 'ICICI') return 'ONLINE';
+  return mode;
+}
+
 // --- Receipt HTML (matches frontend PaymentReceipt.tsx exactly) ---
 
 export function generateReceiptHtml(data) {
@@ -160,7 +170,7 @@ export function generateReceiptHtml(data) {
 
       <!-- Mode of Payment & Signature -->
       <div style="padding:16px 30px 24px;">
-        <p style="margin:0 0 30px;font-weight:600;">Mode of Payment: ${data.paymentMode || 'Cash / UPI / Cheque / Bank Transfer Transaction'}</p>
+        <p style="margin:0 0 30px;font-weight:600;">Mode of Payment: ${formatPaymentMode(data.paymentMode)}</p>
         <div style="text-align:right;margin-top:20px;">
           <p style="margin:0 0 4px;font-weight:600;">Received By</p>
           <p style="margin:0;font-size:13px;color:#555;">${config.authorizedBy}</p>
@@ -313,7 +323,7 @@ export default function generateReceiptPdf(data) {
 
       // ── Mode of payment & signature ──
       y += 16;
-      const modeLabel = data.paymentMode || 'Cash / UPI / Cheque / Bank Transfer Transaction';
+      const modeLabel = formatPaymentMode(data.paymentMode);
       doc.font('Helvetica-Bold').fontSize(11).fillColor('#222222')
         .text(`Mode of Payment: ${modeLabel}`, marginL, y);
 

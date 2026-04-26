@@ -184,20 +184,16 @@ async function getEnrollmentTrend(client = pool) {
   const { rows } = await client.query(
     `SELECT
        TO_CHAR(d.month, 'Mon YYYY') AS "label",
-       COUNT(fp.enrollment_id)::int AS "value"
+       COUNT(e.id)::int AS "value"
      FROM generate_series(
        DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '11 months',
        DATE_TRUNC('month', CURRENT_DATE),
        INTERVAL '1 month'
      ) AS d(month)
-     LEFT JOIN (
-       SELECT p.enrollment_id, MIN(p.payment_date) AS first_payment_date
-       FROM payments p
-       JOIN enrollments e ON e.id = p.enrollment_id AND e.deleted = FALSE
-       GROUP BY p.enrollment_id
-     ) fp
-       ON fp.first_payment_date >= d.month
-       AND fp.first_payment_date < d.month + INTERVAL '1 month'
+     LEFT JOIN enrollments e
+       ON e.deleted = FALSE
+       AND e.installment1_date >= d.month
+       AND e.installment1_date < d.month + INTERVAL '1 month'
      GROUP BY d.month
      ORDER BY d.month`,
   );

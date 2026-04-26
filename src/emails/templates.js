@@ -23,13 +23,13 @@ function baseLayout(content) {
 <body>
   <div class="container">
     <div class="header">
-      <h1>PST Student Management</h1>
+      <h1>Training2Expert Management System</h1>
     </div>
     <div class="body">
       ${content}
     </div>
     <div class="footer">
-      <p>This is an automated message from PST Student Management System.</p>
+      <p>This is an automated message from Training2Expert Management System.</p>
       <p>Please do not reply to this email.</p>
     </div>
   </div>
