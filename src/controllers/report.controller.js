@@ -145,6 +145,12 @@ async function updatePlacementContact(req, res) {
   return ok(res, result, 'Placement contact updated');
 }
 
-export { candidateFilter, feeDue, enrollmentFigures, enquiryFigures, placementReport, updatePlacementContact, downloadBulkCvs, downloadSingleCv, sendBulkEmail, addBulkComment, updateCandidateRemark };
+async function revertPlacementContact(req, res) {
+  const { enrollmentId } = req.params;
+  const result = await reportService.revertPlacementContact(enrollmentId);
+  return ok(res, result, 'Placement contact reverted');
+}
 
-export default { candidateFilter, feeDue, enrollmentFigures, enquiryFigures, placementReport, updatePlacementContact, downloadBulkCvs, downloadSingleCv, sendBulkEmail, addBulkComment, updateCandidateRemark };
+export { candidateFilter, feeDue, enrollmentFigures, enquiryFigures, placementReport, updatePlacementContact, revertPlacementContact, downloadBulkCvs, downloadSingleCv, sendBulkEmail, addBulkComment, updateCandidateRemark };
+
+export default { candidateFilter, feeDue, enrollmentFigures, enquiryFigures, placementReport, updatePlacementContact, revertPlacementContact, downloadBulkCvs, downloadSingleCv, sendBulkEmail, addBulkComment, updateCandidateRemark };

@@ -191,16 +191,19 @@ async function fetchImageBuffer(url) {
     headers: { 'Accept': 'image/png, image/jpeg' },
   });
   const arrayBuffer = await response.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  const view = new Uint8Array(arrayBuffer);
 
   // Validate that the image is PNG or JPEG (formats supported by pdfkit)
-  const isPng = buffer[0] === 0x89 && buffer[1] === 0x50;
-  const isJpeg = buffer[0] === 0xFF && buffer[1] === 0xD8;
+  const isPng = view[0] === 0x89 && view[1] === 0x50;
+  const isJpeg = view[0] === 0xFF && view[1] === 0xD8;
   if (!isPng && !isJpeg) {
     throw new Error(`Unsupported image format (expected PNG or JPEG)`);
   }
 
-  return buffer;
+  // Return ArrayBuffer (not Node Buffer) — the bundled pdfkit.standalone uses a
+  // polyfilled Buffer whose isBuffer() rejects native Node Buffers, falling
+  // through to a stubbed fs.readFileSync. ArrayBuffer hits a working branch.
+  return arrayBuffer;
 }
 
 export default function generateReceiptPdf(data) {

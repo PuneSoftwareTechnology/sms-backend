@@ -91,6 +91,10 @@ async function updatePlacementContact(enrollmentId, data) {
   return reportRepository.updatePlacementContact(enrollmentId, data);
 }
 
-export { candidateFilter, feeDue, enrollmentFigures, enquiryFigures, placementReport, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsForDownload, getCvKeysForDownload, getStudentEmails };
+async function revertPlacementContact(enrollmentId) {
+  return reportRepository.revertPlacementContact(enrollmentId);
+}
 
-export default { candidateFilter, feeDue, enrollmentFigures, enquiryFigures, placementReport, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsForDownload, getCvKeysForDownload, getStudentEmails };
+export { candidateFilter, feeDue, enrollmentFigures, enquiryFigures, placementReport, updatePlacementContact, revertPlacementContact, addBulkComment, updateCandidateRemark, getCvsForDownload, getCvKeysForDownload, getStudentEmails };
+
+export default { candidateFilter, feeDue, enrollmentFigures, enquiryFigures, placementReport, updatePlacementContact, revertPlacementContact, addBulkComment, updateCandidateRemark, getCvsForDownload, getCvKeysForDownload, getStudentEmails };

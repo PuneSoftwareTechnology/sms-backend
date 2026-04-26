@@ -257,6 +257,10 @@ router.put(
   "/reports/placement/:enrollmentId",
   asyncHandler(reportController.updatePlacementContact),
 );
+router.put(
+  "/reports/placement/:enrollmentId/revert",
+  asyncHandler(reportController.revertPlacementContact),
+);
 
 router.get("/qr-codes", asyncHandler(qrController.listQr));
 

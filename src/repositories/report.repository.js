@@ -400,6 +400,23 @@ async function updatePlacementContact(enrollmentId, data, client = pool) {
   return rows[0];
 }
 
-export { candidateFilterReport, feeDueReport, enrollmentFigures, enquiryFigures, placementNotContacted, placementContacted, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsByStudentIds, getCvKeysByStudentIds, getStudentEmails };
+async function revertPlacementContact(enrollmentId, client = pool) {
+  const { rows } = await client.query(
+    `
+      UPDATE enrollments
+      SET contacted_date = NULL
+      WHERE id = $1 AND deleted = FALSE
+      RETURNING
+        id,
+        placement_status  AS "placementStatus",
+        company_name      AS "companyName",
+        contacted_date    AS "contactedDate"
+    `,
+    [enrollmentId],
+  );
+  return rows[0];
+}
 
-export default { candidateFilterReport, feeDueReport, enrollmentFigures, enquiryFigures, placementNotContacted, placementContacted, updatePlacementContact, addBulkComment, updateCandidateRemark, getCvsByStudentIds, getCvKeysByStudentIds, getStudentEmails };
+export { candidateFilterReport, feeDueReport, enrollmentFigures, enquiryFigures, placementNotContacted, placementContacted, updatePlacementContact, revertPlacementContact, addBulkComment, updateCandidateRemark, getCvsByStudentIds, getCvKeysByStudentIds, getStudentEmails };
+
+export default { candidateFilterReport, feeDueReport, enrollmentFigures, enquiryFigures, placementNotContacted, placementContacted, updatePlacementContact, revertPlacementContact, addBulkComment, updateCandidateRemark, getCvsByStudentIds, getCvKeysByStudentIds, getStudentEmails };
