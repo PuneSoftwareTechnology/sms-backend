@@ -33,7 +33,7 @@ import {
 } from "../validators/report.validator.js";
 import { dashboardStatsSchema } from "../validators/dashboard.validator.js";
 import { uploadTemplateSchema } from "../validators/cvTemplate.validator.js";
-import { docxUpload } from "../middlewares/upload.middleware.js";
+import upload, { docxUpload } from "../middlewares/upload.middleware.js";
 import {
   uuidIdParamSchema,
   userIdParamSchema,
@@ -88,6 +88,7 @@ router.post(
 );
 router.post(
   "/enrollments/:enrollmentId/send-certificate",
+  upload.single("certificate"),
   asyncHandler(enrollmentController.sendCertificate),
 );
 

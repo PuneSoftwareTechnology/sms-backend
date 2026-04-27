@@ -66,13 +66,26 @@ async function sendPaymentReceiptEmail({ to, amount, receiptUrl, name, receiptPd
   }
 }
 
-async function sendCertificateEmail({ to, certificateUrl, name }) {
+async function sendCertificateEmail({ to, certificateUrl, name, certificatePdf }) {
   const userName = name || (await userRepository.findByEmail(to))?.name;
   const { subject, html } = templates.certificateTemplate({
     name: userName,
     certificateUrl,
   });
-  await sesService.sendEmail({ to, subject, html });
+
+  if (certificatePdf) {
+    await sesService.sendEmailWithAttachment({
+      to,
+      subject,
+      html,
+      attachment: {
+        content: certificatePdf,
+        filename: `Certificate_${(userName || 'Student').replace(/\s+/g, '_')}.pdf`,
+      },
+    });
+  } else {
+    await sesService.sendEmail({ to, subject, html });
+  }
 }
 
 async function sendBulkCustomEmail({ recipients, subject, body }) {

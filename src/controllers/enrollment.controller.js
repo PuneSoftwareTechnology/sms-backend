@@ -2,6 +2,7 @@ import enrollmentService from "../services/enrollment.service.js";
 import enrollmentRepository from "../repositories/enrollment.repository.js";
 import emailService from "../services/email.service.js";
 import generateReceiptPdf, { generateReceiptHtml } from "../utils/receiptPdf.js";
+import generateCertificatePdf from "../utils/certificatePdf.js";
 import ApiError from "../utils/apiError.js";
 import { ok } from "../utils/apiResponse.js";
 
@@ -126,10 +127,22 @@ async function sendCertificate(req, res) {
   if (!enrollment) throw new ApiError(404, "Enrollment not found");
   if (!enrollment.email) throw new ApiError(400, "Student has no email address");
 
+  // Prefer the PDF rendered by the frontend (html2pdf) — that way the email
+  // attachment matches the on-screen preview byte-for-byte. Fall back to the
+  // server-side pdfkit renderer only if no upload is provided.
+  const certificatePdf = req.file?.buffer
+    ? req.file.buffer.toString("base64")
+    : await generateCertificatePdf({
+        studentName: enrollment.name,
+        courseName: enrollment.course,
+        completionDate: enrollment.end_date,
+      });
+
   await emailService.sendCertificateEmail({
     to: enrollment.email,
     certificateUrl: enrollment.certificate_url || null,
     name: enrollment.name,
+    certificatePdf,
   });
 
   return ok(res, null, "Certificate sent successfully");
