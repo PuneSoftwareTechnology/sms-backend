@@ -6,6 +6,7 @@ const createAdminSchema = z.object({
     email: z.string().email(),
     password: z.string().min(6),
     phone: z.string().optional(),
+    role: z.enum(["ADMIN", "SUPER_ADMIN"]).optional(),
   }),
   params: z.object({}).optional(),
   query: z.object({}).optional(),
@@ -24,5 +25,15 @@ const createQrSchema = z.object({
   query: z.object({}).optional(),
 });
 
-export { createAdminSchema, createQrSchema };
-export default { createAdminSchema, createQrSchema };
+const updateAdminSchema = z.object({
+  body: z.object({
+    name: z.string().min(2).optional(),
+    email: z.string().email().optional(),
+    role: z.enum(["ADMIN", "SUPER_ADMIN"]).optional(),
+  }),
+  params: z.object({ id: z.string().uuid() }),
+  query: z.object({}).optional(),
+});
+
+export { createAdminSchema, updateAdminSchema, createQrSchema };
+export default { createAdminSchema, updateAdminSchema, createQrSchema };

@@ -15,6 +15,11 @@ const enquiryBody = z.object({
   institute: z.string().optional(),
   leadStatus: z.string().optional(),
   demoStatus: z.string().optional(),
+  demoDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD")
+    .optional()
+    .or(z.literal("")),
   comment: z.string().optional(),
 });
 
@@ -41,9 +46,20 @@ const enquiryFilterSchema = z.object({
   }),
 });
 
-export { createEnquirySchema, updateEnquirySchema, enquiryFilterSchema };
+const sendBulkEmailSchema = z.object({
+  body: z.object({
+    enquiryIds: z.array(z.string().uuid()).min(1),
+    subject: z.string().min(1),
+    body: z.string().min(1),
+  }),
+  params: z.object({}).optional(),
+  query: z.object({}).optional(),
+});
+
+export { createEnquirySchema, updateEnquirySchema, enquiryFilterSchema, sendBulkEmailSchema };
 export default {
   createEnquirySchema,
   updateEnquirySchema,
   enquiryFilterSchema,
+  sendBulkEmailSchema,
 };

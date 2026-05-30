@@ -98,10 +98,13 @@ CREATE TABLE IF NOT EXISTS enquiries (
   institute VARCHAR(50),
   lead_status lead_status_enum,
   demo_status demo_status_enum,
+  demo_date DATE,
   comment TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE enquiries ADD COLUMN IF NOT EXISTS demo_date DATE;
 
 CREATE TABLE IF NOT EXISTS enrollments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -380,3 +383,19 @@ CREATE INDEX IF NOT EXISTS idx_cv_templates_course ON cv_templates(course);
 
 DROP TRIGGER IF EXISTS trg_cv_templates_updated_at ON cv_templates;
 CREATE TRIGGER trg_cv_templates_updated_at BEFORE UPDATE ON cv_templates FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- ─── Master Courses (managed by Super Admin) ───────────────────
+CREATE TABLE IF NOT EXISTS courses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT uq_courses_name UNIQUE (name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_courses_is_active ON courses(is_active);
+
+DROP TRIGGER IF EXISTS trg_courses_updated_at ON courses;
+CREATE TRIGGER trg_courses_updated_at BEFORE UPDATE ON courses FOR EACH ROW EXECUTE FUNCTION set_updated_at();

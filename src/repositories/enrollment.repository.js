@@ -16,6 +16,14 @@ async function listEnrollments(filters = {}, client = pool) {
     values.push(filters.course);
     conditions.push(`e.course ILIKE '%' || $${values.length} || '%'`);
   }
+  if (filters.fromDate) {
+    values.push(filters.fromDate);
+    conditions.push(`e.start_date >= $${values.length}`);
+  }
+  if (filters.toDate) {
+    values.push(filters.toDate);
+    conditions.push(`e.start_date <= $${values.length}`);
+  }
   const where = conditions.join(" AND ");
 
   const countResult = await client.query(

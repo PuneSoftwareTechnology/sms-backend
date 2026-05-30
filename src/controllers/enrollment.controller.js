@@ -11,6 +11,8 @@ async function listEnrollments(req, res) {
     enrollment_status: req.query.enrollment_status,
     institute: req.query.institute,
     course: req.query.course,
+    fromDate: req.query.fromDate,
+    toDate: req.query.toDate,
     page: req.query.page,
     limit: req.query.limit,
   });

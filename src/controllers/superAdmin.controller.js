@@ -11,11 +11,19 @@ async function deleteAdmin(req, res) {
   return ok(res, row, "Admin deleted");
 }
 
+async function updateAdmin(req, res) {
+  const admin = await superAdminService.updateAdmin(
+    req.params.id,
+    req.validated.body,
+  );
+  return ok(res, admin, "Admin updated");
+}
+
 async function getAllAdmins(req, res) {
   const admins = await superAdminService.getAllAdmins(req.query);
   return ok(res, admins, "Admins fetched");
 }
 
-export { createAdmin, deleteAdmin, getAllAdmins };
+export { createAdmin, deleteAdmin, updateAdmin, getAllAdmins };
 
-export default { createAdmin, deleteAdmin, getAllAdmins };
+export default { createAdmin, deleteAdmin, updateAdmin, getAllAdmins };

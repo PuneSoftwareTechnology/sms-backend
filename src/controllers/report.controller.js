@@ -107,6 +107,9 @@ async function enrollmentFigures(req, res) {
   if (req.query.year) {
     filters.year = Number(req.query.year);
   }
+  if (req.query.completion_status && req.query.completion_status !== 'All') {
+    filters.completion_status = req.query.completion_status;
+  }
   const rows = await reportService.enrollmentFigures(filters);
   return ok(res, rows, 'Enrollment figures fetched');
 }
@@ -118,6 +121,12 @@ async function enquiryFigures(req, res) {
   }
   if (req.query.year) {
     filters.year = Number(req.query.year);
+  }
+  if (req.query.lead_status && req.query.lead_status !== 'All') {
+    filters.lead_status = req.query.lead_status;
+  }
+  if (req.query.demo_status && req.query.demo_status !== 'All') {
+    filters.demo_status = req.query.demo_status;
   }
   const rows = await reportService.enquiryFigures(filters);
   return ok(res, rows, 'Enquiry figures fetched');

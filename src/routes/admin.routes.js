@@ -13,6 +13,7 @@ import reportController from "../controllers/report.controller.js";
 import dashboardController from "../controllers/dashboard.controller.js";
 import qrController from "../controllers/qr.controller.js";
 import cvTemplateController from "../controllers/cvTemplate.controller.js";
+import courseController from "../controllers/course.controller.js";
 import { updateBatchEndDateSchema, updateEnrollmentSchema } from "../validators/enrollment.validator.js";
 import { createPaymentSchema } from "../validators/payment.validator.js";
 import {
@@ -26,6 +27,7 @@ import {
   createEnquirySchema,
   updateEnquirySchema,
   enquiryFilterSchema,
+  sendBulkEmailSchema,
 } from "../validators/enquiry.validator.js";
 import {
   candidateFilterReportSchema,
@@ -201,6 +203,11 @@ router.post(
   validate(createEnquirySchema),
   asyncHandler(enquiryController.createEnquiry),
 );
+router.post(
+  "/enquiries/send-email",
+  validate(sendBulkEmailSchema),
+  asyncHandler(enquiryController.sendBulkEmail),
+);
 router.put(
   "/enquiries/:id",
   validate(updateEnquirySchema),
@@ -264,6 +271,8 @@ router.put(
 );
 
 router.get("/qr-codes", asyncHandler(qrController.listQr));
+
+router.get("/courses", asyncHandler(courseController.listCourses));
 
 // ─── CV / Resume Templates ─────────────────────────────────────
 router.get("/cv-templates", asyncHandler(cvTemplateController.listTemplates));

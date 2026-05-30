@@ -100,6 +100,7 @@ async function sendBulkCustomEmail({ recipients, subject, body }) {
           subject,
           body,
           recipientName: recipient.name,
+          institute: recipient.institute,
         });
         return sesService.sendEmail({ to: recipient.email, subject, html });
       }),
@@ -118,6 +119,11 @@ async function sendBulkCustomEmail({ recipients, subject, body }) {
   return results;
 }
 
+async function sendDemoDoneEmail({ to, institute }) {
+  const { subject, html } = templates.demoDoneTemplate({ institute });
+  await sesService.sendEmail({ to, subject, html });
+}
+
 export {
   sendPasswordResetEmail,
   sendCvDownloadNotification,
@@ -125,6 +131,7 @@ export {
   sendPaymentReceiptEmail,
   sendCertificateEmail,
   sendBulkCustomEmail,
+  sendDemoDoneEmail,
 };
 
 export default {
@@ -134,4 +141,5 @@ export default {
   sendPaymentReceiptEmail,
   sendCertificateEmail,
   sendBulkCustomEmail,
+  sendDemoDoneEmail,
 };

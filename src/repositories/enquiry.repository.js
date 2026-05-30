@@ -1,10 +1,15 @@
 import pool from "../config/db.js";
 
 async function createEnquiry(payload, client = pool) {
+  const demoStatus = payload.demoStatus || "PENDING";
+  const demoDate =
+    payload.demoDate ||
+    (demoStatus === "DONE" ? new Date().toISOString().slice(0, 10) : null);
+
   const { rows } = await client.query(
     `
-      INSERT INTO enquiries (enquiry_date, name, phone, email, course, institute, lead_status, demo_status, comment)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      INSERT INTO enquiries (enquiry_date, name, phone, email, course, institute, lead_status, demo_status, demo_date, comment)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `,
     [
@@ -15,7 +20,8 @@ async function createEnquiry(payload, client = pool) {
       payload.course || null,
       payload.institute || null,
       payload.leadStatus || "PROSPECTIVE",
-      payload.demoStatus || "PENDING",
+      demoStatus,
+      demoDate,
       payload.comment || null,
     ],
   );
@@ -42,8 +48,21 @@ async function listEnquiries(filters = {}, client = pool) {
     values.push(filters.demoStatus);
     conditions.push(`demo_status = $${values.length}`);
   }
+  if (filters.institute) {
+    values.push(filters.institute);
+    conditions.push(`institute = $${values.length}`);
+  }
+  if (filters.course) {
+    values.push(filters.course);
+    conditions.push(`course = $${values.length}`);
+  }
 
   const where = conditions.join(" AND ");
+
+  const coursesResult = await client.query(
+    `SELECT DISTINCT course FROM enquiries WHERE course IS NOT NULL AND course <> '' ORDER BY course`,
+  );
+  const courses = coursesResult.rows.map((r) => r.course);
 
   const countResult = await client.query(
     `SELECT COUNT(*) FROM enquiries WHERE ${where}`,
@@ -82,10 +101,38 @@ async function listEnquiries(filters = {}, client = pool) {
     total,
     page,
     totalPages: hasPagination ? Math.ceil(total / limit) : 1,
+    courses,
   };
 }
 
+async function findById(id, client = pool) {
+  const { rows } = await client.query(
+    "SELECT * FROM enquiries WHERE id = $1",
+    [id],
+  );
+  return rows[0] || null;
+}
+
+async function findContactsByIds(ids, client = pool) {
+  if (!ids?.length) return [];
+  const { rows } = await client.query(
+    `SELECT id, name, email, institute FROM enquiries WHERE id = ANY($1) AND email IS NOT NULL AND email <> ''`,
+    [ids],
+  );
+  return rows;
+}
+
 async function updateEnquiry(id, payload, client = pool) {
+  let demoDate = payload.demoDate || null;
+  if (!demoDate && payload.demoStatus === "DONE") {
+    const existing = await client.query(
+      "SELECT demo_date FROM enquiries WHERE id = $1",
+      [id],
+    );
+    demoDate =
+      existing.rows[0]?.demo_date ?? new Date().toISOString().slice(0, 10);
+  }
+
   const { rows } = await client.query(
     `
       UPDATE enquiries
@@ -97,9 +144,10 @@ async function updateEnquiry(id, payload, client = pool) {
           institute = $6,
           lead_status = $7,
           demo_status = $8,
-          comment = $9,
+          demo_date = $9,
+          comment = $10,
           updated_at = NOW()
-      WHERE id = $10
+      WHERE id = $11
       RETURNING *
     `,
     [
@@ -111,6 +159,7 @@ async function updateEnquiry(id, payload, client = pool) {
       payload.institute || null,
       payload.leadStatus,
       payload.demoStatus,
+      demoDate,
       payload.comment || null,
       id,
     ],
@@ -146,6 +195,8 @@ export {
   updateEnquiry,
   deleteEnquiry,
   updateLeadStatus,
+  findById,
+  findContactsByIds,
 };
 
 export default {
@@ -154,4 +205,6 @@ export default {
   updateEnquiry,
   deleteEnquiry,
   updateLeadStatus,
+  findById,
+  findContactsByIds,
 };

@@ -6,10 +6,16 @@ import authorizeRoles from "../middlewares/authorize.middleware.js";
 import { imageUpload } from "../middlewares/upload.middleware.js";
 import superAdminController from "../controllers/superAdmin.controller.js";
 import qrController from "../controllers/qr.controller.js";
+import courseController from "../controllers/course.controller.js";
 import {
   createAdminSchema,
+  updateAdminSchema,
   createQrSchema,
 } from "../validators/superAdmin.validator.js";
+import {
+  createCourseSchema,
+  updateCourseSchema,
+} from "../validators/course.validator.js";
 import {
   uuidIdParamSchema,
   qrIdParamSchema,
@@ -25,6 +31,11 @@ router.post(
   asyncHandler(superAdminController.createAdmin),
 );
 router.get("/admins", asyncHandler(superAdminController.getAllAdmins));
+router.put(
+  "/admins/:id",
+  validate(updateAdminSchema),
+  asyncHandler(superAdminController.updateAdmin),
+);
 router.delete(
   "/admins/:id",
   validate(uuidIdParamSchema),
@@ -47,6 +58,23 @@ router.patch(
   "/qr/:qrId/activate",
   validate(qrIdParamSchema),
   asyncHandler(qrController.activateQr),
+);
+
+router.get("/courses", asyncHandler(courseController.listCourses));
+router.post(
+  "/courses",
+  validate(createCourseSchema),
+  asyncHandler(courseController.createCourse),
+);
+router.put(
+  "/courses/:id",
+  validate(updateCourseSchema),
+  asyncHandler(courseController.updateCourse),
+);
+router.delete(
+  "/courses/:id",
+  validate(uuidIdParamSchema),
+  asyncHandler(courseController.deleteCourse),
 );
 
 export default router;

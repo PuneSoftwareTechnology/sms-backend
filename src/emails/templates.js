@@ -1,4 +1,31 @@
-function baseLayout(content) {
+const INSTITUTE_BRANDING = {
+  TCH: {
+    headerName: 'Tech Concept Hub',
+    footerName: 'Tech Concept Hub',
+    contact: '7262000918',
+    headerColor: '#4a1a8a',
+  },
+  PST: {
+    headerName: 'Pune Software Technologies',
+    footerName: 'Pune Software Technologies',
+    contact: '',
+    headerColor: '#1a3c7a',
+  },
+};
+
+const DEFAULT_BRANDING = {
+  headerName: 'Training2Expert Management System',
+  footerName: 'Training2Expert Management System',
+  contact: '',
+  headerColor: '#1a56db',
+};
+
+function getBranding(institute) {
+  return INSTITUTE_BRANDING[institute] || DEFAULT_BRANDING;
+}
+
+function baseLayout(content, institute) {
+  const brand = getBranding(institute);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,14 +34,13 @@ function baseLayout(content) {
   <style>
     body { margin: 0; padding: 0; background-color: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
     .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
-    .header { background-color: #1a56db; padding: 24px 32px; text-align: center; }
+    .header { background-color: ${brand.headerColor}; padding: 24px 32px; text-align: center; }
     .header h1 { color: #ffffff; margin: 0; font-size: 22px; font-weight: 600; }
     .body { padding: 32px; color: #333333; line-height: 1.6; }
-    .body h2 { color: #1a56db; margin-top: 0; font-size: 20px; }
+    .body h2 { color: ${brand.headerColor}; margin-top: 0; font-size: 20px; }
     .body p { margin: 0 0 16px; font-size: 15px; }
-    .btn { display: inline-block; padding: 12px 28px; background-color: #1a56db; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; }
-    .btn:hover { background-color: #1e429f; }
-    .info-box { background-color: #f0f4ff; border-left: 4px solid #1a56db; padding: 16px; margin: 16px 0; border-radius: 0 6px 6px 0; }
+    .btn { display: inline-block; padding: 12px 28px; background-color: ${brand.headerColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; }
+    .info-box { background-color: #f0f4ff; border-left: 4px solid ${brand.headerColor}; padding: 16px; margin: 16px 0; border-radius: 0 6px 6px 0; }
     .info-box p { margin: 0; }
     .footer { padding: 24px 32px; text-align: center; color: #9ca3af; font-size: 13px; border-top: 1px solid #e5e7eb; }
     .footer p { margin: 4px 0; }
@@ -23,13 +49,13 @@ function baseLayout(content) {
 <body>
   <div class="container">
     <div class="header">
-      <h1>Training2Expert Management System</h1>
+      <h1>${brand.headerName}</h1>
     </div>
     <div class="body">
       ${content}
     </div>
     <div class="footer">
-      <p>This is an automated message from Training2Expert Management System.</p>
+      <p>This is an automated message from ${brand.footerName}.</p>
       <p>Please do not reply to this email.</p>
     </div>
   </div>
@@ -113,14 +139,43 @@ function certificateTemplate({ name, certificateUrl }) {
   };
 }
 
-function bulkEmailTemplate({ subject, body, recipientName }) {
+function bulkEmailTemplate({ subject, body, recipientName, institute }) {
+  const isHtml = /<\/?[a-z][\s\S]*>/i.test(body);
+  const content = isHtml
+    ? body
+    : `<div style="white-space: pre-wrap;">${body}</div>`;
+  const greeting = recipientName
+    ? `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#333;">Hi ${recipientName},</p>`
+    : '';
   return {
     subject,
+    html: baseLayout(`${greeting}${content}`, institute),
+  };
+}
+
+function demoDoneTemplate({ institute }) {
+  const brand = getBranding(institute);
+  return {
+    subject: 'Thank You for Attending the Demo Session – Take the Next Step in Your Career',
     html: baseLayout(`
-      <h2>${subject}</h2>
-      ${recipientName ? `<p>Hi ${recipientName},</p>` : ''}
-      <div style="white-space: pre-wrap;">${body}</div>
-    `),
+      <p>Dear Candidate,</p>
+      <p>Thank you for attending our demo session. We hope you found the session informative &amp; practical.</p>
+      <p>At ${brand.headerName}, our focus is not only on teaching concepts but also on helping students gain real industry-oriented practical knowledge, confidence, and job-ready skills.</p>
+      <p><strong>&#9989; What you will get in the complete course:</strong></p>
+      <ul style="padding-left: 20px; margin: 0 0 16px;">
+        <li>Practical hands-on training</li>
+        <li>Real-time business scenario explanation</li>
+        <li>Guidance from experienced industry trainers</li>
+        <li>Interview preparation support</li>
+        <li>Resume/CV building assistance</li>
+        <li>Recorded sessions &amp; practice materials</li>
+        <li>Support for projects and assignments</li>
+        <li>Certification guidance</li>
+        <li>Placement Assistance</li>
+      </ul>
+      <p>If you would like to enroll or need complete course details such as syllabus, fees, batch timings, or career guidance, simply contact us.</p>
+      <p style="margin-top: 24px;">Best Regards,<br>${brand.footerName}${brand.contact ? `<br>&#128222; Contact: ${brand.contact}` : ''}</p>
+    `, institute),
   };
 }
 
@@ -131,6 +186,7 @@ export {
   shortlistNotificationTemplate,
   certificateTemplate,
   bulkEmailTemplate,
+  demoDoneTemplate,
 };
 
 export default {
@@ -140,4 +196,5 @@ export default {
   shortlistNotificationTemplate,
   certificateTemplate,
   bulkEmailTemplate,
+  demoDoneTemplate,
 };

@@ -109,6 +109,73 @@ async function listUsersByRole(role, filters = {}, client = pool) {
   return paginatedResult(rows, total, page, limit);
 }
 
+async function listUsersByRoles(roles, filters = {}, client = pool) {
+  const { page, limit, offset } = parsePagination(filters);
+
+  const countResult = await client.query(
+    'SELECT COUNT(*)::int AS total FROM users WHERE role::text = ANY($1::text[])',
+    [roles],
+  );
+  const total = countResult.rows[0].total;
+
+  const { rows } = await client.query(
+    `SELECT id, name, email, phone, role, is_active, is_approved, is_email_verified, last_login, created_at
+     FROM users
+     WHERE role::text = ANY($1::text[])
+     ORDER BY created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [roles, limit, offset],
+  );
+  return paginatedResult(rows, total, page, limit);
+}
+
+async function deleteUserByRoles(id, roles, client = pool) {
+  const { rows } = await client.query(
+    "DELETE FROM users WHERE id = $1 AND role::text = ANY($2::text[]) RETURNING id",
+    [id, roles],
+  );
+  return rows[0] || null;
+}
+
+async function updateUserByRoles(id, roles, payload, client = pool) {
+  const fields = [];
+  const values = [];
+  let idx = 1;
+
+  if (payload.name !== undefined) {
+    fields.push(`name = $${idx++}`);
+    values.push(payload.name);
+  }
+  if (payload.email !== undefined) {
+    fields.push(`email = $${idx++}`);
+    values.push(payload.email);
+  }
+  if (payload.role !== undefined) {
+    fields.push(`role = $${idx++}::user_role`);
+    values.push(payload.role);
+  }
+
+  if (fields.length === 0) {
+    const { rows } = await client.query(
+      `SELECT id, name, email, phone, role, is_active, is_approved, is_email_verified, last_login, created_at
+       FROM users WHERE id = $1 AND role::text = ANY($2::text[])`,
+      [id, roles],
+    );
+    return rows[0] || null;
+  }
+
+  fields.push(`updated_at = NOW()`);
+  values.push(id, roles);
+
+  const { rows } = await client.query(
+    `UPDATE users SET ${fields.join(", ")}
+     WHERE id = $${idx++} AND role::text = ANY($${idx}::text[])
+     RETURNING id, name, email, phone, role, is_active, is_approved, is_email_verified, last_login, created_at`,
+    values,
+  );
+  return rows[0] || null;
+}
+
 async function deactivateInactiveRecruiters(client = pool) {
   const { rowCount } = await client.query(`
     UPDATE users
@@ -127,8 +194,11 @@ export {
   updatePasswordHash,
   approveStudent,
   deleteUserByRole,
+  deleteUserByRoles,
+  updateUserByRoles,
   deactivateInactiveRecruiters,
   listUsersByRole,
+  listUsersByRoles,
 };
 
 export default {
@@ -140,6 +210,9 @@ export default {
   approveStudent,
   unapproveStudent,
   deleteUserByRole,
+  deleteUserByRoles,
+  updateUserByRoles,
   deactivateInactiveRecruiters,
   listUsersByRole,
+  listUsersByRoles,
 };

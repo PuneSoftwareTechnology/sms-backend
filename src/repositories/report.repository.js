@@ -258,6 +258,14 @@ async function enquiryFigures(filters = {}, client = pool) {
     values.push(filters.year);
     conditions.push(`EXTRACT(YEAR FROM eq.enquiry_date) = $${values.length}`);
   }
+  if (filters.lead_status) {
+    values.push(filters.lead_status);
+    conditions.push(`eq.lead_status = $${values.length}`);
+  }
+  if (filters.demo_status) {
+    values.push(filters.demo_status);
+    conditions.push(`eq.demo_status = $${values.length}`);
+  }
 
   const { rows } = await client.query(
     `

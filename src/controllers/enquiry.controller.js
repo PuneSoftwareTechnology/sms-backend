@@ -12,6 +12,8 @@ async function listEnquiries(req, res) {
     toDate: req.query.toDate,
     leadStatus: req.query.leadStatus,
     demoStatus: req.query.demoStatus,
+    institute: req.query.institute,
+    course: req.query.course,
     page: req.query.page,
     limit: req.query.limit,
   });
@@ -31,6 +33,12 @@ async function deleteEnquiry(req, res) {
   return ok(res, row, "Enquiry deleted");
 }
 
-export { createEnquiry, listEnquiries, updateEnquiry, deleteEnquiry };
+async function sendBulkEmail(req, res) {
+  const { enquiryIds, subject, body } = req.validated.body;
+  const results = await enquiryService.sendBulkEmail({ enquiryIds, subject, body });
+  return ok(res, results, `${results.sent} email(s) sent successfully`);
+}
 
-export default { createEnquiry, listEnquiries, updateEnquiry, deleteEnquiry };
+export { createEnquiry, listEnquiries, updateEnquiry, deleteEnquiry, sendBulkEmail };
+
+export default { createEnquiry, listEnquiries, updateEnquiry, deleteEnquiry, sendBulkEmail };
