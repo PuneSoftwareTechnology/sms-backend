@@ -225,6 +225,10 @@ async function enrollmentFigures(filters = {}, client = pool) {
     values.push(filters.year);
     conditions.push(`EXTRACT(YEAR FROM e.start_date) = $${values.length}`);
   }
+  if (filters.completion_status) {
+    values.push(filters.completion_status);
+    conditions.push(`e.completion_status = $${values.length}`);
+  }
 
   const { rows } = await client.query(
     `

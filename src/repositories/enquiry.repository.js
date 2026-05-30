@@ -51,19 +51,38 @@ async function listEnquiries(filters = {}, client = pool) {
   );
   const total = parseInt(countResult.rows[0].count, 10);
 
-  const page = Math.max(1, parseInt(filters.page, 10) || 1);
-  const limit = Math.min(100, Math.max(1, parseInt(filters.limit, 10) || 50));
-  const offset = (page - 1) * limit;
+  const hasPagination =
+    filters.limit !== undefined || filters.page !== undefined;
 
-  values.push(limit);
-  values.push(offset);
+  let rows;
+  let page = 1;
+  let limit = total;
 
-  const { rows } = await client.query(
-    `SELECT * FROM enquiries WHERE ${where} ORDER BY created_at DESC LIMIT $${values.length - 1} OFFSET $${values.length}`,
-    values,
-  );
+  if (hasPagination) {
+    page = Math.max(1, parseInt(filters.page, 10) || 1);
+    limit = Math.max(1, parseInt(filters.limit, 10) || 50);
+    const offset = (page - 1) * limit;
 
-  return { items: rows, total, page, totalPages: Math.ceil(total / limit) };
+    values.push(limit);
+    values.push(offset);
+
+    ({ rows } = await client.query(
+      `SELECT * FROM enquiries WHERE ${where} ORDER BY created_at DESC LIMIT $${values.length - 1} OFFSET $${values.length}`,
+      values,
+    ));
+  } else {
+    ({ rows } = await client.query(
+      `SELECT * FROM enquiries WHERE ${where} ORDER BY created_at DESC`,
+      values,
+    ));
+  }
+
+  return {
+    items: rows,
+    total,
+    page,
+    totalPages: hasPagination ? Math.ceil(total / limit) : 1,
+  };
 }
 
 async function updateEnquiry(id, payload, client = pool) {
