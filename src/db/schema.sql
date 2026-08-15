@@ -1,10 +1,15 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 DO $$ BEGIN
-  CREATE TYPE user_role AS ENUM ('SUPER_ADMIN', 'ADMIN', 'RECRUITER', 'STUDENT');
+  -- INTERN is a restricted admin account: enquiries, QR code, access management
+  -- and four of the report screens. See middlewares/internAccess.middleware.js.
+  CREATE TYPE user_role AS ENUM ('SUPER_ADMIN', 'ADMIN', 'RECRUITER', 'STUDENT', 'INTERN');
 EXCEPTION
   WHEN duplicate_object THEN null;
 END $$;
+
+-- Existing databases predate INTERN, so add the label separately.
+ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'INTERN';
 
 DO $$ BEGIN
   CREATE TYPE employment_status_enum AS ENUM ('EMPLOYED', 'UNEMPLOYED', 'FREELANCER');

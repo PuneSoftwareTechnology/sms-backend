@@ -6,7 +6,7 @@ const createAdminSchema = z.object({
     email: z.string().email(),
     password: z.string().min(6),
     phone: z.string().optional(),
-    role: z.enum(["ADMIN", "SUPER_ADMIN"]).optional(),
+    role: z.enum(["ADMIN", "SUPER_ADMIN", "INTERN"]).optional(),
   }),
   params: z.object({}).optional(),
   query: z.object({}).optional(),
@@ -29,7 +29,7 @@ const updateAdminSchema = z.object({
   body: z.object({
     name: z.string().min(2).optional(),
     email: z.string().email().optional(),
-    role: z.enum(["ADMIN", "SUPER_ADMIN"]).optional(),
+    role: z.enum(["ADMIN", "SUPER_ADMIN", "INTERN"]).optional(),
   }),
   params: z.object({ id: z.string().uuid() }),
   query: z.object({}).optional(),

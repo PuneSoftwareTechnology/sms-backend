@@ -3,6 +3,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import validate from "../middlewares/validate.middleware.js";
 import authMiddleware from "../middlewares/auth.middleware.js";
 import authorizeRoles from "../middlewares/authorize.middleware.js";
+import restrictIntern from "../middlewares/internAccess.middleware.js";
 import enrollmentController from "../controllers/enrollment.controller.js";
 import paymentController from "../controllers/payment.controller.js";
 import testController from "../controllers/test.controller.js";
@@ -46,7 +47,13 @@ import {
 
 const router = express.Router();
 
-router.use(authMiddleware, authorizeRoles("ADMIN", "SUPER_ADMIN"));
+// Interns share this router with admins but only reach an allow-listed subset
+// of it — see internAccess.middleware.js.
+router.use(
+  authMiddleware,
+  authorizeRoles("ADMIN", "SUPER_ADMIN", "INTERN"),
+  restrictIntern,
+);
 
 router.get(
   "/dashboard/stats",

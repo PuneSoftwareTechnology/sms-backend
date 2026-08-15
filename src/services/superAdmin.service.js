@@ -2,7 +2,9 @@ import bcrypt from "bcryptjs";
 import ApiError from "../utils/apiError.js";
 import userRepository from "../repositories/user.repository.js";
 
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
+// Staff accounts a super admin manages from the Access Management screen.
+// INTERN is a restricted admin — see middlewares/internAccess.middleware.js.
+const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "INTERN"];
 
 async function createAdmin(payload) {
   const existing = await userRepository.findByEmail(payload.email);
@@ -10,7 +12,7 @@ async function createAdmin(payload) {
     throw new ApiError(409, "Email already exists");
   }
 
-  const role = payload.role === "SUPER_ADMIN" ? "SUPER_ADMIN" : "ADMIN";
+  const role = ADMIN_ROLES.includes(payload.role) ? payload.role : "ADMIN";
   const passwordHash = await bcrypt.hash(payload.password, 10);
   return userRepository.createUser({
     name: payload.name,
