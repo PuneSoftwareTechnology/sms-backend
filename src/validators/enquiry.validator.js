@@ -13,6 +13,7 @@ const enquiryBody = z.object({
     .pipe(z.string().email().optional()),
   course: z.string().optional(),
   institute: z.string().optional(),
+  enquiryType: z.enum(['WALKIN', 'PHONE', 'WEBSITE']).optional(),
   leadStatus: z.string().optional(),
   demoStatus: z.string().optional(),
   demoDate: z
@@ -43,6 +44,7 @@ const enquiryFilterSchema = z.object({
     toDate: z.string().optional(),
     leadStatus: z.string().optional(),
     demoStatus: z.string().optional(),
+    enquiryType: z.string().optional(),
   }),
 });
 

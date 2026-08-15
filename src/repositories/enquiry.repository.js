@@ -8,8 +8,8 @@ async function createEnquiry(payload, client = pool) {
 
   const { rows } = await client.query(
     `
-      INSERT INTO enquiries (enquiry_date, name, phone, email, course, institute, lead_status, demo_status, demo_date, comment)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      INSERT INTO enquiries (enquiry_date, name, phone, email, course, institute, enquiry_type, lead_status, demo_status, demo_date, comment)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `,
     [
@@ -19,6 +19,7 @@ async function createEnquiry(payload, client = pool) {
       payload.email || null,
       payload.course || null,
       payload.institute || null,
+      payload.enquiryType || "WALKIN",
       payload.leadStatus || "PROSPECTIVE",
       demoStatus,
       demoDate,
@@ -55,6 +56,10 @@ async function listEnquiries(filters = {}, client = pool) {
   if (filters.course) {
     values.push(filters.course);
     conditions.push(`course = $${values.length}`);
+  }
+  if (filters.enquiryType) {
+    values.push(filters.enquiryType);
+    conditions.push(`enquiry_type = $${values.length}`);
   }
 
   const where = conditions.join(" AND ");
@@ -142,12 +147,13 @@ async function updateEnquiry(id, payload, client = pool) {
           email = $4,
           course = $5,
           institute = $6,
-          lead_status = $7,
-          demo_status = $8,
-          demo_date = $9,
-          comment = $10,
+          enquiry_type = COALESCE($7, enquiry_type),
+          lead_status = $8,
+          demo_status = $9,
+          demo_date = $10,
+          comment = $11,
           updated_at = NOW()
-      WHERE id = $11
+      WHERE id = $12
       RETURNING *
     `,
     [
@@ -157,6 +163,7 @@ async function updateEnquiry(id, payload, client = pool) {
       payload.email || null,
       payload.course || null,
       payload.institute || null,
+      payload.enquiryType || null,
       payload.leadStatus,
       payload.demoStatus,
       demoDate,

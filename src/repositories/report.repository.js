@@ -266,6 +266,10 @@ async function enquiryFigures(filters = {}, client = pool) {
     values.push(filters.demo_status);
     conditions.push(`eq.demo_status = $${values.length}`);
   }
+  if (filters.enquiry_type) {
+    values.push(filters.enquiry_type);
+    conditions.push(`eq.enquiry_type = $${values.length}`);
+  }
 
   const { rows } = await client.query(
     `

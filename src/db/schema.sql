@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS enquiries (
   email VARCHAR(150),
   course VARCHAR(100),
   institute VARCHAR(50),
+  enquiry_type VARCHAR(20) DEFAULT 'WALKIN',
   lead_status lead_status_enum,
   demo_status demo_status_enum,
   demo_date DATE,
@@ -388,11 +389,13 @@ CREATE TRIGGER trg_cv_templates_updated_at BEFORE UPDATE ON cv_templates FOR EAC
 CREATE TABLE IF NOT EXISTS courses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
+  -- Enquiry and enrollment keep independent course lists; names may differ.
+  course_type VARCHAR(20) NOT NULL DEFAULT 'ENQUIRY',
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_by UUID REFERENCES users(id),
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT uq_courses_name UNIQUE (name)
+  CONSTRAINT uq_courses_name_type UNIQUE (name, course_type)
 );
 
 CREATE INDEX IF NOT EXISTS idx_courses_is_active ON courses(is_active);

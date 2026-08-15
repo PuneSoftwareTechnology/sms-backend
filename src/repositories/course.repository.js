@@ -2,10 +2,15 @@ import pool from "../config/db.js";
 
 async function createCourse(payload, client = pool) {
   const { rows } = await client.query(
-    `INSERT INTO courses (name, is_active, created_by)
-     VALUES ($1, $2, $3)
+    `INSERT INTO courses (name, course_type, is_active, created_by)
+     VALUES ($1, $2, $3, $4)
      RETURNING *`,
-    [payload.name, payload.isActive ?? true, payload.createdBy || null],
+    [
+      payload.name,
+      payload.type || "ENQUIRY",
+      payload.isActive ?? true,
+      payload.createdBy || null,
+    ],
   );
   return rows[0];
 }
@@ -21,6 +26,10 @@ async function listCourses(filters = {}, client = pool) {
   if (filters.search) {
     values.push(`%${filters.search}%`);
     conditions.push(`name ILIKE $${values.length}`);
+  }
+  if (filters.type) {
+    values.push(filters.type);
+    conditions.push(`course_type = $${values.length}`);
   }
 
   const where = conditions.join(" AND ");
@@ -38,10 +47,10 @@ async function findCourseById(id, client = pool) {
   return rows[0] || null;
 }
 
-async function findCourseByName(name, client = pool) {
+async function findCourseByName(name, type = "ENQUIRY", client = pool) {
   const { rows } = await client.query(
-    "SELECT * FROM courses WHERE LOWER(name) = LOWER($1)",
-    [name],
+    "SELECT * FROM courses WHERE LOWER(name) = LOWER($1) AND course_type = $2",
+    [name, type],
   );
   return rows[0] || null;
 }

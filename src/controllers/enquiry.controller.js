@@ -14,6 +14,7 @@ async function listEnquiries(req, res) {
     demoStatus: req.query.demoStatus,
     institute: req.query.institute,
     course: req.query.course,
+    enquiryType: req.query.enquiryType,
     page: req.query.page,
     limit: req.query.limit,
   });

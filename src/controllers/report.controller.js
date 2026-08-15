@@ -128,6 +128,9 @@ async function enquiryFigures(req, res) {
   if (req.query.demo_status && req.query.demo_status !== 'All') {
     filters.demo_status = req.query.demo_status;
   }
+  if (req.query.enquiry_type && req.query.enquiry_type !== 'All') {
+    filters.enquiry_type = req.query.enquiry_type;
+  }
   const rows = await reportService.enquiryFigures(filters);
   return ok(res, rows, 'Enquiry figures fetched');
 }

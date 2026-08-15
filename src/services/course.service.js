@@ -6,12 +6,14 @@ async function createCourse(payload, createdBy) {
   if (!name) {
     throw new ApiError(400, "Course name is required");
   }
-  const existing = await courseRepository.findCourseByName(name);
+  const type = payload.type || "ENQUIRY";
+  const existing = await courseRepository.findCourseByName(name, type);
   if (existing) {
     throw new ApiError(409, "Course already exists");
   }
   return courseRepository.createCourse({
     name,
+    type,
     isActive: payload.isActive,
     createdBy,
   });
@@ -28,7 +30,11 @@ async function updateCourse(id, payload) {
   }
   if (payload.name) {
     const name = payload.name.trim();
-    const dup = await courseRepository.findCourseByName(name);
+    // Uniqueness is per list, so compare within the course's own type.
+    const dup = await courseRepository.findCourseByName(
+      name,
+      existing.course_type,
+    );
     if (dup && dup.id !== id) {
       throw new ApiError(409, "Course name already in use");
     }

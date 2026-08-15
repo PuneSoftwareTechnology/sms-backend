@@ -16,6 +16,7 @@ async function listCourses(req, res) {
         ? undefined
         : req.query.isActive === "true",
     search: req.query.search || undefined,
+    type: req.query.type || undefined,
   };
   const rows = await courseService.listCourses(filters);
   return ok(res, rows, "Courses fetched");

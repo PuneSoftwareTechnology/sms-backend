@@ -3,6 +3,7 @@ import { z } from "zod";
 const createCourseSchema = z.object({
   body: z.object({
     name: z.string().trim().min(1, "Course name is required").max(150),
+    type: z.enum(["ENQUIRY", "ENROLLMENT"]).optional(),
     isActive: z.boolean().optional(),
   }),
   params: z.object({}).optional(),
