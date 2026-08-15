@@ -13,7 +13,8 @@ EXCEPTION
 END $$;
 
 DO $$ BEGIN
-  CREATE TYPE lead_status_enum AS ENUM ('NEW', 'CONTACTED', 'QUALIFIED', 'CONVERTED', 'LOST');
+  -- NEW is the state every enquiry starts in; staff move it on after contact.
+  CREATE TYPE lead_status_enum AS ENUM ('NEW', 'PROSPECTIVE', 'NON_PROSPECTIVE', 'ENROLLED');
 EXCEPTION
   WHEN duplicate_object THEN null;
 END $$;

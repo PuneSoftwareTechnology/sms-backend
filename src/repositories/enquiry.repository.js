@@ -20,7 +20,7 @@ async function createEnquiry(payload, client = pool) {
       payload.course || null,
       payload.institute || null,
       payload.enquiryType || "WALKIN",
-      payload.leadStatus || "PROSPECTIVE",
+      payload.leadStatus || "NEW",
       demoStatus,
       demoDate,
       payload.comment || null,

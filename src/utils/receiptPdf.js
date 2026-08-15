@@ -1,14 +1,14 @@
 import PDFDocument from 'pdfkit';
 
 const INSTITUTE_CONFIG = {
-  PST: {
-    name: 'Pune Software Technologies',
-    shortName: 'PST',
+  TECHVAA: {
+    name: 'Techvaa',
+    shortName: 'TECHVAA',
     address: '',
-    authorizedBy: 'Autorized - Pune Software Technologies',
-    headerColor: '#1a3c7a',
-    headerColorRgb: [26, 60, 122],
-    logo: 'https://www.punesoftwaretechnologies.com/_next/static/media/Logo.a02dd24f.png',
+    authorizedBy: 'Authorized - Techvaa',
+    headerColor: '#153767',
+    headerColorRgb: [21, 55, 103],
+    logo: 'https://www.techvaa.com/logo.png',
   },
   TCH: {
     name: 'TCH Software Services LLP',
@@ -79,7 +79,7 @@ function formatPaymentMode(mode) {
 // --- Receipt HTML (matches frontend PaymentReceipt.tsx exactly) ---
 
 export function generateReceiptHtml(data) {
-  const config = INSTITUTE_CONFIG[data.institute] || INSTITUTE_CONFIG.PST;
+  const config = INSTITUTE_CONFIG[data.institute] || INSTITUTE_CONFIG.TECHVAA;
   const receiptNo = generateReceiptNumber(data.enrollmentId, data.installmentDate);
   const receiptDate = formatReceiptDate(data.installmentDate);
   const amountInWords = numberToWords(data.amountReceived);
@@ -219,7 +219,7 @@ async function fetchImageBuffer(url) {
 export default function generateReceiptPdf(data) {
   return new Promise(async (resolve, reject) => {
     try {
-      const config = INSTITUTE_CONFIG[data.institute] || INSTITUTE_CONFIG.PST;
+      const config = INSTITUTE_CONFIG[data.institute] || INSTITUTE_CONFIG.TECHVAA;
       const receiptNo = generateReceiptNumber(data.enrollmentId, data.installmentDate);
       const receiptDate = formatReceiptDate(data.installmentDate);
       const amountInWords = numberToWords(data.amountReceived);

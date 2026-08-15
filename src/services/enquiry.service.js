@@ -2,8 +2,20 @@ import ApiError from '../utils/apiError.js';
 import enquiryRepository from '../repositories/enquiry.repository.js';
 import emailService from '../services/email.service.js';
 
+// PST was renamed to TECHVAA. The Techvaa website posts enquiries here with a
+// hard-coded institute code, so accept the old value and map it forward — the
+// two systems can then be deployed in either order without dropping leads.
+const LEGACY_INSTITUTES = { PST: 'TECHVAA' };
+
+function normaliseInstitute(payload) {
+  const mapped = LEGACY_INSTITUTES[payload.institute];
+  return mapped ? { ...payload, institute: mapped } : payload;
+}
+
 async function createEnquiry(payload) {
-  const created = await enquiryRepository.createEnquiry(payload);
+  const created = await enquiryRepository.createEnquiry(
+    normaliseInstitute(payload),
+  );
   if (created?.demo_status === 'DONE' && created.email) {
     emailService
       .sendDemoDoneEmail({ to: created.email, institute: created.institute })
@@ -23,7 +35,10 @@ async function updateEnquiry(id, payload) {
   if (!existing) {
     throw new ApiError(404, 'Enquiry not found');
   }
-  const updated = await enquiryRepository.updateEnquiry(id, payload);
+  const updated = await enquiryRepository.updateEnquiry(
+    id,
+    normaliseInstitute(payload),
+  );
   if (!updated) {
     throw new ApiError(404, 'Enquiry not found');
   }

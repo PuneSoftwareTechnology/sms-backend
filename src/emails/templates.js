@@ -5,11 +5,13 @@ const INSTITUTE_BRANDING = {
     contact: '7262000918',
     headerColor: '#4a1a8a',
   },
-  PST: {
-    headerName: 'Pune Software Technologies',
-    footerName: 'Pune Software Technologies',
-    contact: '',
-    headerColor: '#1a3c7a',
+  TECHVAA: {
+    headerName: 'Techvaa',
+    footerName: 'Techvaa',
+    contact: '+91 91755 99880',
+    email: 'techvaa24@gmail.com',
+    website: 'https://www.techvaa.com',
+    headerColor: '#153767',
   },
 };
 
@@ -20,8 +22,14 @@ const DEFAULT_BRANDING = {
   headerColor: '#1a56db',
 };
 
+// PST was renamed to TECHVAA. Rows written before the rename migration ran
+// still carry the old code, so map it forward rather than falling back to the
+// generic system branding.
+const LEGACY_INSTITUTES = { PST: 'TECHVAA' };
+
 function getBranding(institute) {
-  return INSTITUTE_BRANDING[institute] || DEFAULT_BRANDING;
+  const code = LEGACY_INSTITUTES[institute] || institute;
+  return INSTITUTE_BRANDING[code] || DEFAULT_BRANDING;
 }
 
 function baseLayout(content, institute) {
@@ -56,6 +64,7 @@ function baseLayout(content, institute) {
     </div>
     <div class="footer">
       <p>This is an automated message from ${brand.footerName}.</p>
+      ${brand.email ? `<p>Questions? Write to <a href="mailto:${brand.email}" style="color: ${brand.headerColor};">${brand.email}</a>${brand.website ? ` &middot; <a href="${brand.website}" style="color: ${brand.headerColor};">${brand.website.replace(/^https?:\/\//, '')}</a>` : ''}</p>` : ''}
       <p>Please do not reply to this email.</p>
     </div>
   </div>
