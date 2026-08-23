@@ -89,11 +89,31 @@ const trainerPayoutFilterSchema = z.object({
     paymentStatus: z.enum(["UNPAID", "PARTIAL", "PAID", "HOLD", "NOT_SET"]).optional(),
     fromDate: z.string().optional(),
     toDate: z.string().optional(),
+    // Payment dates, not enrollment dates — used by the month drill-down from
+    // the Trainer Payment Figures report.
+    paidFrom: z.string().optional(),
+    paidTo: z.string().optional(),
+    paymentSeq: z.enum(["BOTH", "FIRST", "SECOND"]).optional(),
     search: z.string().optional(),
   }),
 });
 
+const trainerPaymentFiguresSchema = z.object({
+  body: z.object({}).optional(),
+  params: z.object({}).optional(),
+  query: z.object({
+    // Start year of the Indian financial year: 2026 means Apr 2026 - Mar 2027.
+    financialYear: z.coerce.number().int().min(2000).max(2100),
+    batch: z.string().optional(),
+    course: z.string().optional(),
+    completionStatus: z.string().optional(),
+    // BOTH is the default; FIRST / SECOND narrow to one instalment.
+    paymentSeq: z.enum(["BOTH", "FIRST", "SECOND"]).optional(),
+  }),
+});
+
 export {
+  trainerPaymentFiguresSchema,
   createTrainerSchema,
   updateTrainerSchema,
   mergeTrainersSchema,
@@ -102,6 +122,7 @@ export {
 };
 
 export default {
+  trainerPaymentFiguresSchema,
   createTrainerSchema,
   updateTrainerSchema,
   mergeTrainersSchema,

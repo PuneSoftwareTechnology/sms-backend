@@ -85,6 +85,13 @@ async function clearTrainerPayout(req, res) {
   );
 }
 
+async function getTrainerPaymentFigures(req, res) {
+  const result = await trainerPayoutService.getPaymentFigures(
+    req.validated.query,
+  );
+  return ok(res, result, "Trainer payment figures fetched");
+}
+
 async function getTrainerDetail(req, res) {
   const result = await trainerPayoutService.getTrainerDetail(req.params.id, {
     page: req.query.page,
@@ -103,6 +110,7 @@ export {
   listTrainerPayouts,
   updateTrainerPayout,
   clearTrainerPayout,
+  getTrainerPaymentFigures,
   getTrainerDetail,
 };
 
@@ -116,5 +124,6 @@ export default {
   listTrainerPayouts,
   updateTrainerPayout,
   clearTrainerPayout,
+  getTrainerPaymentFigures,
   getTrainerDetail,
 };

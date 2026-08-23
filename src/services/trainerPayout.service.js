@@ -73,6 +73,30 @@ async function getTrainerDetail(trainerId, filters = {}) {
   return { trainer, summary, teachingCourses, ...payouts };
 }
 
-export { listPayouts, updatePayout, clearPayout, getTrainerDetail };
+/**
+ * Trainer Payment Figures report: a trainer x month matrix of amounts paid,
+ * plus the filter option lists the report's dropdowns need.
+ */
+async function getPaymentFigures(filters = {}) {
+  const [rows, options] = await Promise.all([
+    trainerPayoutRepository.trainerPaymentFigures(filters),
+    trainerPayoutRepository.payoutFilterOptions(),
+  ]);
+  return { rows, ...options };
+}
 
-export default { listPayouts, updatePayout, clearPayout, getTrainerDetail };
+export {
+  listPayouts,
+  updatePayout,
+  clearPayout,
+  getTrainerDetail,
+  getPaymentFigures,
+};
+
+export default {
+  listPayouts,
+  updatePayout,
+  clearPayout,
+  getTrainerDetail,
+  getPaymentFigures,
+};

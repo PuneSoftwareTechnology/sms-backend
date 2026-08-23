@@ -23,6 +23,12 @@ const STUDENT_PAID = `(
   + COALESCE(e.installment3_amount, 0)
 )`;
 
+/** Settled total across both instalments, for queries without the `base` CTE. */
+const PAYOUT_SETTLED_SQL = `(
+  COALESCE(p.installment1_amount, 0) + COALESCE(p.installment1_tds, 0)
+  + COALESCE(p.installment2_amount, 0) + COALESCE(p.installment2_tds, 0)
+)`;
+
 /** Gross discharged against the training fee for one installment. */
 const SETTLED = (n) =>
   `(COALESCE(p.installment${n}_amount, 0) + COALESCE(p.installment${n}_tds, 0))`;
@@ -121,6 +127,28 @@ function buildBaseWhere(filters, values) {
   if (filters.toDate) {
     values.push(filters.toDate);
     conditions.push(`e.start_date <= $${values.length}`);
+  }
+  // paidFrom/paidTo filter on when the TRAINER was paid, which is a different
+  // date from fromDate/toDate above (the student's enrollment start). The month
+  // drill-down from the Trainer Payment Figures report needs this one.
+  if (filters.paidFrom || filters.paidTo) {
+    const seq = filters.paymentSeq;
+    const parts = [];
+    for (const n of [1, 2]) {
+      if (seq === "FIRST" && n !== 1) continue;
+      if (seq === "SECOND" && n !== 2) continue;
+      const bounds = [`p.installment${n}_date IS NOT NULL`];
+      if (filters.paidFrom) {
+        values.push(filters.paidFrom);
+        bounds.push(`p.installment${n}_date >= $${values.length}`);
+      }
+      if (filters.paidTo) {
+        values.push(filters.paidTo);
+        bounds.push(`p.installment${n}_date <= $${values.length}`);
+      }
+      parts.push(`(${bounds.join(" AND ")})`);
+    }
+    conditions.push(`(${parts.join(" OR ")})`);
   }
   if (filters.search) {
     values.push(`%${filters.search}%`);
@@ -309,6 +337,139 @@ async function deletePayout(enrollmentId, client = pool) {
   return rows[0] || null;
 }
 
+/**
+ * Trainer Payment Figures — amounts paid to each trainer, bucketed by the month
+ * the payment was made, across one Indian financial year (Apr–Mar).
+ *
+ * Two things behave differently on purpose, matching the report spec:
+ *  - `totalPaid` / `totalTds` are scoped to the selected year AND instalment.
+ *  - `balanceToPay` is NOT: it is the outstanding amount across all time, since
+ *    "what we still owe" is not a property of a financial year.
+ *
+ * Rows are the trainers who have at least one enrollment matching the batch /
+ * course / completion filters, so a trainer with no payments yet still shows as
+ * a zero row rather than vanishing.
+ */
+async function trainerPaymentFigures(filters = {}, client = pool) {
+  const values = [];
+  // Enrollment-level conditions, built once and reused across the CTEs below.
+  // The same $n may appear many times in one statement, so the clause text is
+  // safe to repeat as long as the values array is built exactly once.
+  const enrollmentConditions = ["e.deleted = FALSE", "e.trainer_id IS NOT NULL"];
+
+  if (filters.batch) {
+    values.push(filters.batch);
+    enrollmentConditions.push(`e.batch = $${values.length}`);
+  }
+  if (filters.course) {
+    values.push(filters.course);
+    enrollmentConditions.push(`e.course = $${values.length}`);
+  }
+  if (filters.completionStatus) {
+    values.push(filters.completionStatus);
+    enrollmentConditions.push(`e.completion_status = $${values.length}`);
+  }
+  const where = enrollmentConditions.join(" AND ");
+
+  // Financial year: 2026 means 1 Apr 2026 → 31 Mar 2027.
+  const fyStart = Number(filters.financialYear);
+  values.push(`${fyStart}-04-01`);
+  const fromParam = `$${values.length}`;
+  values.push(`${fyStart + 1}-03-31`);
+  const toParam = `$${values.length}`;
+
+  const seq = filters.paymentSeq;
+  const seqNumbers = seq === "FIRST" ? [1] : seq === "SECOND" ? [2] : [1, 2];
+
+  // One row per dated instalment, so months can be bucketed by payment date.
+  const instalmentUnion = seqNumbers
+    .map(
+      (n) => `
+        SELECT
+          e.trainer_id                            AS trainer_id,
+          p.installment${n}_date                  AS paid_date,
+          COALESCE(p.installment${n}_amount, 0)   AS amount,
+          COALESCE(p.installment${n}_tds, 0)      AS tds
+        FROM enrollments e
+        JOIN trainer_payouts p ON p.enrollment_id = e.id
+        WHERE ${where}
+          AND p.installment${n}_date IS NOT NULL
+          AND p.installment${n}_date >= ${fromParam}::date
+          AND p.installment${n}_date <= ${toParam}::date`,
+    )
+    .join("\n        UNION ALL");
+
+  const { rows } = await client.query(
+    `
+      WITH roster AS (
+        SELECT DISTINCT e.trainer_id
+        FROM enrollments e
+        WHERE ${where}
+      ),
+      paid AS (${instalmentUnion}
+      ),
+      monthly AS (
+        SELECT
+          trainer_id,
+          EXTRACT(MONTH FROM paid_date)::int AS month,
+          SUM(amount)::numeric               AS amount
+        FROM paid
+        GROUP BY trainer_id, 2
+      ),
+      totals AS (
+        SELECT trainer_id, SUM(amount)::numeric AS paid, SUM(tds)::numeric AS tds
+        FROM paid
+        GROUP BY trainer_id
+      ),
+      balance AS (
+        SELECT
+          e.trainer_id,
+          SUM(COALESCE(p.training_fee, 0) - ${PAYOUT_SETTLED_SQL})::numeric AS balance
+        FROM enrollments e
+        LEFT JOIN trainer_payouts p ON p.enrollment_id = e.id
+        WHERE ${where}
+        GROUP BY e.trainer_id
+      )
+      SELECT
+        t.id                            AS "trainerId",
+        t.trainer_code                  AS "trainerCode",
+        t.name                          AS "trainerName",
+        t.courses                       AS "trainerCourses",
+        t.note                          AS "trainerNote",
+        COALESCE(tot.paid, 0)           AS "totalPaid",
+        COALESCE(tot.tds, 0)            AS "totalTds",
+        COALESCE(bal.balance, 0)        AS "balanceToPay",
+        COALESCE(
+          (
+            SELECT JSONB_OBJECT_AGG(m.month::text, m.amount)
+            FROM monthly m WHERE m.trainer_id = t.id
+          ),
+          '{}'::jsonb
+        )                               AS "monthly"
+      FROM roster r
+      JOIN trainers t   ON t.id = r.trainer_id
+      LEFT JOIN totals tot ON tot.trainer_id = t.id
+      LEFT JOIN balance bal ON bal.trainer_id = t.id
+      ORDER BY COALESCE(tot.paid, 0) DESC, t.name ASC
+    `,
+    values,
+  );
+
+  return rows.map((r) => ({
+    trainerId: r.trainerId,
+    trainerCode: r.trainerCode,
+    trainerName: r.trainerName,
+    trainerCourses: r.trainerCourses ?? [],
+    trainerNote: r.trainerNote,
+    totalPaid: Number(r.totalPaid),
+    totalTds: Number(r.totalTds),
+    balanceToPay: Number(r.balanceToPay),
+    monthly: Object.fromEntries(
+      Object.entries(r.monthly ?? {}).map(([m, v]) => [Number(m), Number(v)]),
+    ),
+  }));
+}
+
 /** Distinct values backing the tracker's filter dropdowns. */
 async function payoutFilterOptions(client = pool) {
   const { rows } = await client.query(`
@@ -331,6 +492,7 @@ export {
   upsertPayout,
   deletePayout,
   payoutFilterOptions,
+  trainerPaymentFigures,
 };
 
 export default {
@@ -340,4 +502,5 @@ export default {
   upsertPayout,
   deletePayout,
   payoutFilterOptions,
+  trainerPaymentFigures,
 };

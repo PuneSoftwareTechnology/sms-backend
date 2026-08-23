@@ -93,6 +93,7 @@ Mirrors how master courses already work:
 | Create / edit / delete / merge | `/super-admin/trainers` | SUPER_ADMIN |
 | Payout tracker, edits, clear | `/admin/trainer-payouts` | SUPER_ADMIN |
 | Dashboard totals | inside `GET /admin/dashboard/stats` | SUPER_ADMIN |
+| Payment figures report | `GET /admin/reports/trainer-payment-figures` | SUPER_ADMIN |
 
 Trainer payment figures are super-admin only. To open the tracker to admins,
 change the `authorizeRoles("SUPER_ADMIN")` calls on those three routes in
@@ -129,6 +130,40 @@ Totals are paired the same way as the revenue section: **Paid to Trainers** is
 scoped to the selected period (money that actually moved, like revenue
 collected), while **Total Payable** and **Balance to Pay** are point-in-time
 totals across all periods (like pending dues).
+
+## The Trainer Payment Figures report
+
+A trainer x month matrix of what was actually paid, over one **Indian financial
+year (Apr-Mar)** — not a calendar year, so the columns run Apr, May, ... Mar and
+January to March fall in the *following* calendar year. `financialYearRange()` on
+the frontend owns that off-by-one and is unit-tested, leap-year February
+included.
+
+Filters: payment year, batch, course, course completion status, and payment
+sequence (both instalments by default, or just the 1st / 2nd).
+
+Two deliberate asymmetries, both flagged in the UI:
+
+- **Month columns, Total Paid and Total TDS** are scoped to the selected year
+  *and* payment sequence. Buckets come from the instalment's payment date.
+- **Balance to Pay** is not. It is the outstanding amount across all time,
+  because what we still owe is not a property of a financial year. The column is
+  marked with an asterisk and the footnote says so.
+
+Rows are the trainers with at least one enrollment matching the batch / course /
+completion filters, so a trainer who has been paid nothing still appears as a
+zero row instead of vanishing from the roster.
+
+### Drill-down
+
+Clicking any figure opens the tracker with the filters that produced it. A month
+cell passes `paidFrom` / `paidTo`, which filter on **when the trainer was paid** —
+a different column from the tracker's existing `fromDate` / `toDate`, which
+filter on the student's enrollment start date. Using the wrong pair here would
+silently return the wrong rows, so the payment-date filter was added for this.
+
+The tracker surfaces an arriving drill-down as a removable chip ("Paid in Jun
+2026, 1st payment"), so a narrowed list is never unexplained.
 
 ## Migrating
 

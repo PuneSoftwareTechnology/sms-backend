@@ -38,6 +38,7 @@ import {
 import {
   updateTrainerPayoutSchema,
   trainerPayoutFilterSchema,
+  trainerPaymentFiguresSchema,
 } from "../validators/trainer.validator.js";
 import { dashboardStatsSchema } from "../validators/dashboard.validator.js";
 import { uploadTemplateSchema } from "../validators/cvTemplate.validator.js";
@@ -325,6 +326,12 @@ router.delete(
   authorizeRoles("SUPER_ADMIN"),
   validate(enrollmentIdParamSchema),
   asyncHandler(trainerController.clearTrainerPayout),
+);
+router.get(
+  "/reports/trainer-payment-figures",
+  authorizeRoles("SUPER_ADMIN"),
+  validate(trainerPaymentFiguresSchema),
+  asyncHandler(trainerController.getTrainerPaymentFigures),
 );
 router.get(
   "/trainers/:id/payouts",
