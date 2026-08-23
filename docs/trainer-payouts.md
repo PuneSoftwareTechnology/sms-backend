@@ -91,7 +91,7 @@ Mirrors how master courses already work:
 | --- | --- | --- |
 | List trainers (dropdown) | `GET /admin/trainers` | ADMIN, SUPER_ADMIN |
 | Create / edit / delete / merge | `/super-admin/trainers` | SUPER_ADMIN |
-| Payout tracker + edits | `/admin/trainer-payouts` | SUPER_ADMIN |
+| Payout tracker, edits, clear | `/admin/trainer-payouts` | SUPER_ADMIN |
 | Dashboard totals | inside `GET /admin/dashboard/stats` | SUPER_ADMIN |
 
 Trainer payment figures are super-admin only. To open the tracker to admins,
@@ -100,6 +100,18 @@ change the `authorizeRoles("SUPER_ADMIN")` calls on those three routes in
 
 Interns are blocked automatically — `internAccess.middleware.js` is an
 allow-list, so anything new is denied to them until it is added.
+
+### Clearing a row
+
+`DELETE /admin/trainer-payouts/:enrollmentId` deletes the `trainer_payouts`
+record and nothing else. It is a **reset, not a removal**: rows are driven by
+enrollments, so the row reappears immediately with no fee, no payments and no
+comment, ready to be entered again. Deleting the enrollment from this screen is
+deliberately not possible — that belongs on the Enrollment page.
+
+The button is disabled while `payoutId` is null, so it never looks like it would
+remove the row itself. Calling it on a row with nothing recorded is a no-op, not
+an error.
 
 ### The dashboard totals
 
