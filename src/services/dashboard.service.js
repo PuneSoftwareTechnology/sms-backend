@@ -4,6 +4,10 @@ import dashboardRepository from '../repositories/dashboard.repository.js';
 let cache = { data: null, expiresAt: 0, key: '' };
 
 async function getStats(filters) {
+  // Trainer payment figures are super-admin only, so the role is part of the
+  // cache key: without it a super admin's cached response — trainer payouts
+  // included — would be served straight back to an admin.
+  const includeTrainerPayouts = filters.role === "SUPER_ADMIN";
   const cacheKey = JSON.stringify(filters);
   if (cache.key === cacheKey && Date.now() < cache.expiresAt) {
     return cache.data;
@@ -23,6 +27,8 @@ async function getStats(filters) {
     activeRecruiters, cvDownloads, shortlistCount, inDemandCourses,
     // Tier 6: Assessment
     techScoreByCourse, avgCommScore, testCompletion,
+    // Tier 7: Trainer payouts (super admin only)
+    trainerPayoutTotals, trainerPayoutByTrainer,
   ] = await Promise.all([
     dashboardRepository.getRevenueCollected(filters),
     dashboardRepository.getPendingDues(),
@@ -57,6 +63,13 @@ async function getStats(filters) {
     dashboardRepository.getTechScoreByCourse(),
     dashboardRepository.getAvgCommunicationScore(),
     dashboardRepository.getTestCompletion(),
+
+    includeTrainerPayouts
+      ? dashboardRepository.getTrainerPayoutTotals(filters)
+      : null,
+    includeTrainerPayouts
+      ? dashboardRepository.getTrainerPayoutByTrainer(filters)
+      : null,
   ]);
 
   // Derived metrics
@@ -126,6 +139,16 @@ async function getStats(filters) {
       avgCommunicationScore: avgCommScore,
       testCompletionRate,
     },
+    // Omitted entirely for non-super-admins rather than zeroed, so the section
+    // simply does not exist for them instead of showing misleading blanks.
+    ...(includeTrainerPayouts
+      ? {
+        trainerPayout: {
+          ...trainerPayoutTotals,
+          byTrainer: trainerPayoutByTrainer,
+        },
+      }
+      : {}),
   };
 
   cache = { data: result, expiresAt: Date.now() + 30_000, key: cacheKey };

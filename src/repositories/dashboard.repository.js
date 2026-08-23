@@ -517,6 +517,91 @@ async function getTestCompletion(client = pool) {
   return rows[0];
 }
 
+// ─── Tier 7: Trainer payouts (what we owe trainers) ───────────────────────────
+// Mirrors the revenue pairing above: money that actually moved is date-filtered,
+// while what is owed is a point-in-time total. TDS counts toward the fee being
+// discharged — see docs/trainer-payouts.md.
+
+/** Amount paid / TDS for one instalment, restricted to the period when given. */
+function payoutInPeriod(column, n, hasDates) {
+  const raw = `COALESCE(p.installment${n}_${column}, 0)`;
+  return hasDates
+    ? `CASE WHEN p.installment${n}_date::date BETWEEN $1 AND $2 THEN ${raw} ELSE 0 END`
+    : raw;
+}
+
+const PAYOUT_SETTLED = `(
+  COALESCE(p.installment1_amount, 0) + COALESCE(p.installment1_tds, 0)
+  + COALESCE(p.installment2_amount, 0) + COALESCE(p.installment2_tds, 0)
+)`;
+
+async function getTrainerPayoutTotals(filters = {}, client = pool) {
+  const values = [];
+  const hasDates = !!(filters.startDate && filters.endDate);
+  if (hasDates) values.push(filters.startDate, filters.endDate);
+
+  const paid = [
+    payoutInPeriod("amount", 1, hasDates),
+    payoutInPeriod("amount", 2, hasDates),
+  ].join(" + ");
+  const tds = [
+    payoutInPeriod("tds", 1, hasDates),
+    payoutInPeriod("tds", 2, hasDates),
+  ].join(" + ");
+
+  const { rows } = await client.query(
+    `SELECT
+       COUNT(*)::int                                                  AS "trackedStudents",
+       COUNT(DISTINCT e.trainer_id)::int                              AS "trainerCount",
+       COALESCE(SUM(COALESCE(p.training_fee, 0)), 0)::numeric         AS "totalPayable",
+       COALESCE(SUM(${paid}), 0)::numeric                             AS "totalPaid",
+       COALESCE(SUM(${tds}), 0)::numeric                              AS "totalTds",
+       COALESCE(SUM(COALESCE(p.training_fee, 0) - ${PAYOUT_SETTLED}), 0)::numeric AS "totalBalance",
+       COUNT(*) FILTER (WHERE COALESCE(p.training_fee, 0) = 0)::int   AS "feeNotSet"
+     FROM enrollments e
+     JOIN trainers t ON e.trainer_id = t.id
+     LEFT JOIN trainer_payouts p ON p.enrollment_id = e.id
+     WHERE e.deleted = FALSE`,
+    values,
+  );
+
+  const r = rows[0];
+  return {
+    trackedStudents: r.trackedStudents,
+    trainerCount: r.trainerCount,
+    totalPayable: Number(r.totalPayable),
+    totalPaid: Number(r.totalPaid),
+    totalTds: Number(r.totalTds),
+    totalBalance: Number(r.totalBalance),
+    feeNotSet: r.feeNotSet,
+  };
+}
+
+/** Outstanding balance per trainer — who we owe the most, largest first. */
+async function getTrainerPayoutByTrainer(filters = {}, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       t.name                                                         AS "trainer",
+       COALESCE(SUM(COALESCE(p.training_fee, 0)), 0)::numeric         AS "payable",
+       COALESCE(SUM(${PAYOUT_SETTLED}), 0)::numeric                   AS "settled",
+       COALESCE(SUM(COALESCE(p.training_fee, 0) - ${PAYOUT_SETTLED}), 0)::numeric AS "balance"
+     FROM enrollments e
+     JOIN trainers t ON e.trainer_id = t.id
+     LEFT JOIN trainer_payouts p ON p.enrollment_id = e.id
+     WHERE e.deleted = FALSE
+     GROUP BY t.id, t.name
+     HAVING COALESCE(SUM(COALESCE(p.training_fee, 0)), 0) > 0
+     ORDER BY "balance" DESC
+     LIMIT 10`,
+  );
+  return rows.map((r) => ({
+    trainer: r.trainer,
+    payable: Number(r.payable),
+    settled: Number(r.settled),
+    balance: Number(r.balance),
+  }));
+}
+
 export {
   getRevenueCollected, getPendingDues, getRevenueByCourse, getRevenueByInstitute, getRevenueTrend, getAverageFee,
   getActiveEnrollments, getNewEnrollments, getEnrollmentTrend, getCourseDistribution, getInstituteEnrollments, getCompletionBreakdown,
@@ -524,6 +609,7 @@ export {
   getPlacementOverall, getPlacementByCourse, getAwaitingPlacement, getTopHiringCompanies,
   getActiveRecruiters, getCvDownloads, getShortlistCount, getInDemandCourses,
   getTechScoreByCourse, getAvgCommunicationScore, getTestCompletion,
+  getTrainerPayoutTotals, getTrainerPayoutByTrainer,
 };
 
 export default {
@@ -533,4 +619,5 @@ export default {
   getPlacementOverall, getPlacementByCourse, getAwaitingPlacement, getTopHiringCompanies,
   getActiveRecruiters, getCvDownloads, getShortlistCount, getInDemandCourses,
   getTechScoreByCourse, getAvgCommunicationScore, getTestCompletion,
+  getTrainerPayoutTotals, getTrainerPayoutByTrainer,
 };

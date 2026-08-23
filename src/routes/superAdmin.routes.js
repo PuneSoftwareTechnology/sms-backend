@@ -7,6 +7,7 @@ import { imageUpload } from "../middlewares/upload.middleware.js";
 import superAdminController from "../controllers/superAdmin.controller.js";
 import qrController from "../controllers/qr.controller.js";
 import courseController from "../controllers/course.controller.js";
+import trainerController from "../controllers/trainer.controller.js";
 import {
   createAdminSchema,
   updateAdminSchema,
@@ -16,6 +17,11 @@ import {
   createCourseSchema,
   updateCourseSchema,
 } from "../validators/course.validator.js";
+import {
+  createTrainerSchema,
+  updateTrainerSchema,
+  mergeTrainersSchema,
+} from "../validators/trainer.validator.js";
 import {
   uuidIdParamSchema,
   qrIdParamSchema,
@@ -75,6 +81,32 @@ router.delete(
   "/courses/:id",
   validate(uuidIdParamSchema),
   asyncHandler(courseController.deleteCourse),
+);
+
+// ─── Trainers ──────────────────────────────────────────────────
+// Only super admins create and edit trainers; everyone else selects from the
+// list via GET /admin/trainers. Merge is here too — it repoints enrollments and
+// payouts, so it is the most destructive action in the feature.
+router.get("/trainers", asyncHandler(trainerController.listTrainersWithStats));
+router.post(
+  "/trainers",
+  validate(createTrainerSchema),
+  asyncHandler(trainerController.createTrainer),
+);
+router.post(
+  "/trainers/merge",
+  validate(mergeTrainersSchema),
+  asyncHandler(trainerController.mergeTrainers),
+);
+router.patch(
+  "/trainers/:id",
+  validate(updateTrainerSchema),
+  asyncHandler(trainerController.updateTrainer),
+);
+router.delete(
+  "/trainers/:id",
+  validate(uuidIdParamSchema),
+  asyncHandler(trainerController.deleteTrainer),
 );
 
 export default router;

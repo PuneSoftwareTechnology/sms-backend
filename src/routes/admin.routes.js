@@ -15,6 +15,7 @@ import dashboardController from "../controllers/dashboard.controller.js";
 import qrController from "../controllers/qr.controller.js";
 import cvTemplateController from "../controllers/cvTemplate.controller.js";
 import courseController from "../controllers/course.controller.js";
+import trainerController from "../controllers/trainer.controller.js";
 import { updateBatchEndDateSchema, updateEnrollmentSchema } from "../validators/enrollment.validator.js";
 import { createPaymentSchema } from "../validators/payment.validator.js";
 import {
@@ -34,6 +35,10 @@ import {
   candidateFilterReportSchema,
   feeDueSchema,
 } from "../validators/report.validator.js";
+import {
+  updateTrainerPayoutSchema,
+  trainerPayoutFilterSchema,
+} from "../validators/trainer.validator.js";
 import { dashboardStatsSchema } from "../validators/dashboard.validator.js";
 import { uploadTemplateSchema } from "../validators/cvTemplate.validator.js";
 import upload, { docxUpload } from "../middlewares/upload.middleware.js";
@@ -293,6 +298,39 @@ router.delete(
   "/cv-templates/:id",
   validate(uuidIdParamSchema),
   asyncHandler(cvTemplateController.deleteTemplate),
+);
+
+// ─── Trainers ──────────────────────────────────────────────────
+// Read-only: this is what populates the trainer dropdown on the enrollment
+// form. Creating and editing trainers lives on the super-admin router.
+router.get("/trainers", asyncHandler(trainerController.listTrainers));
+
+// ─── Trainer payouts (what we owe trainers) ────────────────────
+// Payment figures for trainers are super-admin only. Change the role list here
+// to open the tracker up to admins.
+router.get(
+  "/trainer-payouts",
+  authorizeRoles("SUPER_ADMIN"),
+  validate(trainerPayoutFilterSchema),
+  asyncHandler(trainerController.listTrainerPayouts),
+);
+router.patch(
+  "/trainer-payouts/:enrollmentId",
+  authorizeRoles("SUPER_ADMIN"),
+  validate(updateTrainerPayoutSchema),
+  asyncHandler(trainerController.updateTrainerPayout),
+);
+router.delete(
+  "/trainer-payouts/:enrollmentId",
+  authorizeRoles("SUPER_ADMIN"),
+  validate(enrollmentIdParamSchema),
+  asyncHandler(trainerController.clearTrainerPayout),
+);
+router.get(
+  "/trainers/:id/payouts",
+  authorizeRoles("SUPER_ADMIN"),
+  validate(uuidIdParamSchema),
+  asyncHandler(trainerController.getTrainerDetail),
 );
 
 export default router;

@@ -16,6 +16,9 @@ const updateEnrollmentSchema = z.object({
     course: z.string().optional(),
     batch: z.string().nullable().optional(),
     trainer: z.string().nullable().optional(),
+    // Trainers are assigned by id; `trainer` above is the name snapshot the
+    // service keeps in step and is no longer set directly by the UI.
+    trainer_id: z.string().uuid().nullable().optional(),
     start_date: z.string().nullable().optional(),
     end_date: z.string().nullable().optional(),
     completion_status: z.enum(["IN_PROGRESS", "ACTIVE", "DROPOUT", "COMPLETED"]).optional(),

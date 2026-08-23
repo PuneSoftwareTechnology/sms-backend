@@ -55,8 +55,8 @@ async function listEnrollments(filters = {}, client = pool) {
 async function createEnrollment(payload, client = pool) {
   const { rows } = await client.query(
     `
-      INSERT INTO enrollments (student_id, institute, course, batch, trainer, start_date, end_date, total_fee)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO enrollments (student_id, institute, course, batch, trainer, trainer_id, start_date, end_date, total_fee)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `,
     [
@@ -64,7 +64,10 @@ async function createEnrollment(payload, client = pool) {
       payload.institute || null,
       payload.course,
       payload.batch || null,
+      // `trainer` is a denormalized copy of the trainer's name kept in step with
+      // trainer_id, so the reports still reading the text column keep working.
       payload.trainer || null,
+      payload.trainerId || null,
       payload.startDate || null,
       payload.endDate || null,
       payload.totalFee || 0,
@@ -110,6 +113,13 @@ async function getDistinctCourses(client = pool) {
   return rows.map((r) => r.course);
 }
 
+async function getDistinctBatches(client = pool) {
+  const { rows } = await client.query(
+    "SELECT DISTINCT batch FROM enrollments WHERE batch IS NOT NULL AND batch <> '' AND deleted = FALSE ORDER BY batch",
+  );
+  return rows.map((r) => r.batch);
+}
+
 async function getDistinctCompletedCourses(client = pool) {
   const { rows } = await client.query(
     "SELECT DISTINCT course FROM enrollments WHERE course IS NOT NULL AND completion_status = 'COMPLETED' AND deleted = FALSE ORDER BY course",
@@ -126,6 +136,7 @@ async function updateEnrollment(id, payload, client = pool) {
     "course",
     "batch",
     "trainer",
+    "trainer_id",
     "start_date",
     "end_date",
     "completion_status",
@@ -211,6 +222,7 @@ export {
   findByEmail,
   findByStudentId,
   getDistinctCourses,
+  getDistinctBatches,
   getDistinctCompletedCourses,
   updateBatchEndDate,
   markBatchCompleted,
@@ -225,6 +237,7 @@ export default {
   findByEmail,
   findByStudentId,
   getDistinctCourses,
+  getDistinctBatches,
   getDistinctCompletedCourses,
   updateBatchEndDate,
   markBatchCompleted,

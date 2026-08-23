@@ -22,6 +22,9 @@ async function getStats(req, res) {
     }
   }
 
+  // Drives whether the trainer payout section is included at all.
+  filters.role = req.user?.role;
+
   const stats = await dashboardService.getStats(filters);
   return ok(res, stats, 'Dashboard stats fetched');
 }

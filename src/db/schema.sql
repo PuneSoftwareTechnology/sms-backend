@@ -408,3 +408,66 @@ CREATE INDEX IF NOT EXISTS idx_courses_is_active ON courses(is_active);
 
 DROP TRIGGER IF EXISTS trg_courses_updated_at ON courses;
 CREATE TRIGGER trg_courses_updated_at BEFORE UPDATE ON courses FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- ─── Trainers (managed by Super Admin) ─────────────────────────
+-- Trainers are referenced by id, never by name: two different people can share
+-- a name, and enrollments.trainer_id is what keeps their payouts separate.
+-- trainer_code is assigned by the sequence default so concurrent inserts cannot
+-- collide on it, and gives humans a short unambiguous handle ("pay TRN-011").
+CREATE SEQUENCE IF NOT EXISTS trainer_code_seq AS BIGINT START 1;
+
+CREATE TABLE IF NOT EXISTS trainers (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  trainer_code TEXT UNIQUE NOT NULL
+                 DEFAULT 'TRN-' || LPAD(NEXTVAL('trainer_code_seq')::TEXT, 3, '0'),
+  name         VARCHAR(150) NOT NULL,
+  -- Courses the trainer is hired for. A hint that groups the enrollment
+  -- dropdown, never a restriction: a Java trainer can be assigned React.
+  courses      TEXT[] NOT NULL DEFAULT '{}',
+  -- Optional, and only worth filling in to tell two same-named trainers apart.
+  note         TEXT,
+  is_active    BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_trainers_name_lower
+  ON trainers (LOWER(REGEXP_REPLACE(TRIM(name), '\s+', ' ', 'g')));
+CREATE INDEX IF NOT EXISTS idx_trainers_is_active ON trainers (is_active);
+
+DROP TRIGGER IF EXISTS trg_trainers_updated_at ON trainers;
+CREATE TRIGGER trg_trainers_updated_at BEFORE UPDATE ON trainers FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS trainer_id UUID REFERENCES trainers(id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_trainer_id ON enrollments (trainer_id);
+
+-- ─── Trainer payouts (what we owe the trainer, per enrollment) ──
+-- One row per enrollment. The "1st 50% / 2nd 50%" figures are derived from
+-- training_fee and split1_percent rather than stored, so an uneven split needs
+-- no schema change. TDS is recorded per installment and counts as settled:
+-- amount_paid + tds is the gross discharged against training_fee.
+CREATE TABLE IF NOT EXISTS trainer_payouts (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  enrollment_id       UUID NOT NULL UNIQUE REFERENCES enrollments(id) ON DELETE CASCADE,
+  trainer_id          UUID REFERENCES trainers(id) ON DELETE SET NULL,
+  training_fee        NUMERIC(10,2) NOT NULL DEFAULT 0,
+  split1_percent      NUMERIC(5,2) NOT NULL DEFAULT 50,
+  installment1_amount NUMERIC(10,2),
+  installment1_date   DATE,
+  installment1_tds    NUMERIC(10,2),
+  installment1_mode   TEXT,
+  installment2_amount NUMERIC(10,2),
+  installment2_date   DATE,
+  installment2_tds    NUMERIC(10,2),
+  installment2_mode   TEXT,
+  comment             TEXT,
+  -- NULL means "derive from the amounts"; a value is a manual override (HOLD).
+  payment_status      TEXT,
+  created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_trainer_payouts_trainer_id ON trainer_payouts (trainer_id);
+
+DROP TRIGGER IF EXISTS trg_trainer_payouts_updated_at ON trainer_payouts;
+CREATE TRIGGER trg_trainer_payouts_updated_at BEFORE UPDATE ON trainer_payouts FOR EACH ROW EXECUTE FUNCTION set_updated_at();

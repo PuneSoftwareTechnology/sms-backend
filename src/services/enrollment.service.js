@@ -4,13 +4,30 @@ import ApiError from "../utils/apiError.js";
 import enrollmentRepository from "../repositories/enrollment.repository.js";
 import userRepository from "../repositories/user.repository.js";
 import studentRepository from "../repositories/student.repository.js";
+import trainerRepository from "../repositories/trainer.repository.js";
+
+/**
+ * Trainers are identified by id, not by name — two people can share a name. The
+ * `trainer` text column is kept as a denormalized snapshot of that trainer's
+ * name so every existing read path (fee dues, candidate reports, CSV exports)
+ * keeps working untouched while new code joins on trainer_id.
+ *
+ * Returns the name to store, or null when the trainer is being cleared.
+ */
+async function resolveTrainerName(trainerId, client) {
+  if (!trainerId) return null;
+  const trainer = await trainerRepository.findTrainerById(trainerId, client);
+  if (!trainer) throw new ApiError(404, "Trainer not found");
+  return trainer.name;
+}
 
 async function listEnrollments(filters = {}) {
-  const [result, courses] = await Promise.all([
+  const [result, courses, batches] = await Promise.all([
     enrollmentRepository.listEnrollments(filters),
     enrollmentRepository.getDistinctCourses(),
+    enrollmentRepository.getDistinctBatches(),
   ]);
-  return { ...result, courses };
+  return { ...result, courses, batches };
 }
 
 async function createCandidateEnrollment(payload) {
@@ -41,13 +58,16 @@ async function createCandidateEnrollment(payload) {
     await studentRepository.createEmptyProfile(student.id, client);
 
     // 3. Create enrollment
+    const trainerId = payload.trainer_id || payload.trainerId || null;
+    const trainerName = await resolveTrainerName(trainerId, client);
     const enrollment = await enrollmentRepository.createEnrollment(
       {
         studentId: student.id,
         institute: payload.institute || null,
         course: payload.course,
         batch: payload.batch || null,
-        trainer: payload.trainer || null,
+        trainer: trainerName ?? payload.trainer ?? null,
+        trainerId: trainerId,
         startDate: payload.start_date || payload.startDate || null,
         endDate: payload.end_date || payload.endDate || null,
         totalFee: payload.total_fee || payload.totalFee || 0,
@@ -125,6 +145,16 @@ async function updateEnrollment(enrollmentId, payload) {
 
     // Update enrollment fields
     const { name, email, phone, ...enrollmentFields } = payload;
+
+    // Assigning or clearing the trainer rewrites the name snapshot with it, so
+    // trainer_id and the legacy `trainer` text can never disagree.
+    if (enrollmentFields.trainer_id !== undefined) {
+      enrollmentFields.trainer = await resolveTrainerName(
+        enrollmentFields.trainer_id,
+        client,
+      );
+    }
+
     await enrollmentRepository.updateEnrollment(enrollmentId, enrollmentFields, client);
 
     await client.query("COMMIT");
