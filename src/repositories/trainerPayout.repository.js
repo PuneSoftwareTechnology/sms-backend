@@ -167,6 +167,13 @@ function buildComputedWhere(filters, values) {
     values.push(filters.paymentStatus);
     conditions.push(`payment_status = $${values.length}`);
   }
+  // Rows that still move the outstanding figure — what the Balance to Pay
+  // drill-down from the figures report asks for. Non-zero rather than positive
+  // on purpose: an overpaid row (negative balance) is part of the same total, so
+  // excluding it would leave the listed rows failing to add up to the figure.
+  if (filters.hasBalance) {
+    conditions.push("balance <> 0");
+  }
   return conditions.join(" AND ");
 }
 

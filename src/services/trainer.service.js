@@ -7,6 +7,40 @@ function normalizeName(name) {
   return (name || "").trim().replace(/\s+/g, " ");
 }
 
+/**
+ * Blank-to-null for the record-keeping fields, plus uppercasing for the two
+ * that are conventionally written that way (PAN, IFSC). Empty string and null
+ * both mean "not recorded", and storing both would make the table show a blank
+ * cell for one and a dash for the other.
+ */
+const UPPERCASE_FIELDS = new Set(["panNumber", "ifscCode"]);
+
+const DETAIL_FIELDS = [
+  "panNumber",
+  "beneficiaryName",
+  "bankName",
+  "ifscCode",
+  "accountNumber",
+  "comment",
+];
+
+function detailUpdates(payload, { includeUnset = false } = {}) {
+  const out = {};
+  for (const field of DETAIL_FIELDS) {
+    if (payload[field] === undefined && !includeUnset) continue;
+    const trimmed = (payload[field] ?? "").trim();
+    out[field] = trimmed
+      ? UPPERCASE_FIELDS.has(field)
+        ? trimmed.toUpperCase()
+        : trimmed
+      : null;
+  }
+  if (payload.fees !== undefined || includeUnset) {
+    out.fees = payload.fees ?? null;
+  }
+  return out;
+}
+
 function cleanCourses(courses) {
   if (!Array.isArray(courses)) return [];
   const seen = new Set();
@@ -48,6 +82,7 @@ async function createTrainer(payload) {
     courses: cleanCourses(payload.courses),
     note: payload.note?.trim() || null,
     isActive: payload.isActive,
+    ...detailUpdates(payload, { includeUnset: true }),
   });
 }
 
@@ -77,6 +112,7 @@ async function updateTrainer(id, payload) {
   if (payload.courses !== undefined) updates.courses = cleanCourses(payload.courses);
   if (payload.note !== undefined) updates.note = payload.note?.trim() || null;
   if (payload.isActive !== undefined) updates.isActive = payload.isActive;
+  Object.assign(updates, detailUpdates(payload));
 
   const updated = await trainerRepository.updateTrainer(id, updates);
 

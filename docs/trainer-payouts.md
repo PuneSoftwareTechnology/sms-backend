@@ -45,6 +45,29 @@ React course, and the full list always stays selectable. What they are
 *actually* teaching is derived from their enrollments and displayed alongside,
 so the tags never drift into meaning "everything".
 
+### Record-keeping fields
+
+`pan_number`, `bank_beneficiary_name`, `bank_name`, `bank_ifsc`,
+`bank_account_number`, `fees` and `comment` (migration
+`add-trainer-bank-details.mjs`) exist so the office has one place to look these
+up. Nothing outside the Trainers page reads them — no enrollment, receipt,
+export or report.
+
+- **`trainers.fees` is not a payout amount.** What we owe for a given student is
+  `trainer_payouts.training_fee`, edited per row on Trainer Payments. Defaulting
+  one from the other would rewrite payment history the next time somebody edited
+  the trainer's rate.
+- `fees` is nullable on purpose: `NULL` is "not recorded", `0` would read as
+  "works for free".
+- Account numbers are `TEXT`, never numeric — they carry leading zeros and are
+  identifiers, not quantities.
+- PAN and IFSC are stored upper-cased but **not** format-enforced: an admin
+  copying what is on a document must never be blocked by our idea of the shape.
+  The form shows an advisory warning and saves anyway.
+- Merging takes any of these the survivor is missing from the absorbed records
+  (`COALESCE`, survivor wins) — same reasoning as the course union: merge must
+  not delete the only copy of a detail.
+
 ## Money model
 
 One `trainer_payouts` row per enrollment, created on first edit. Rows in the
@@ -162,8 +185,17 @@ a different column from the tracker's existing `fromDate` / `toDate`, which
 filter on the student's enrollment start date. Using the wrong pair here would
 silently return the wrong rows, so the payment-date filter was added for this.
 
+**Balance to Pay** drills down differently, because the figure means something
+different: it passes no paid-date window and no payment sequence — the balance is
+outstanding across all time, so either would hide rows that make up it — and
+instead passes `hasBalance=true`, which keeps the tracker to rows whose balance
+is non-zero. Non-zero rather than positive: an overpaid row has a negative
+balance and is part of the same total, so dropping it would leave the listed rows
+failing to add up to the figure that was clicked.
+
 The tracker surfaces an arriving drill-down as a removable chip ("Paid in Jun
-2026, 1st payment"), so a narrowed list is never unexplained.
+2026, 1st payment", "Balance still to pay"), so a narrowed list is never
+unexplained.
 
 ## Migrating
 

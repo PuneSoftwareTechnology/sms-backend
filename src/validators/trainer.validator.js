@@ -1,5 +1,25 @@
 import { z } from "zod";
 
+/**
+ * Record-keeping fields for the Trainers page — PAN, bank details, standing
+ * fee, free-text comment. Nothing else in the system reads them, so they are
+ * length-checked rather than format-enforced: an admin typing what is on the
+ * cheque must never be blocked by our idea of the format. The UI nudges toward
+ * the right shape.
+ */
+const optionalText = (max) => z.string().trim().max(max).nullable().optional();
+
+const trainerDetailFields = {
+  panNumber: optionalText(20),
+  beneficiaryName: optionalText(150),
+  bankName: optionalText(150),
+  ifscCode: optionalText(20),
+  accountNumber: optionalText(40),
+  // Nullable, not defaulted to 0: "not recorded" and "works for free" differ.
+  fees: z.number().min(0).nullable().optional(),
+  comment: optionalText(1000),
+};
+
 const createTrainerSchema = z.object({
   body: z.object({
     name: z.string().trim().min(1, "Trainer name is required").max(150),
@@ -7,6 +27,7 @@ const createTrainerSchema = z.object({
     // never a restriction on who can be assigned what.
     courses: z.array(z.string()).optional(),
     note: z.string().max(200).nullable().optional(),
+    ...trainerDetailFields,
     isActive: z.boolean().optional(),
     // Set once the user has confirmed a same-name trainer is a different person.
     confirmDuplicate: z.boolean().optional(),
@@ -21,16 +42,14 @@ const updateTrainerSchema = z.object({
       name: z.string().trim().min(1).max(150).optional(),
       courses: z.array(z.string()).optional(),
       note: z.string().max(200).nullable().optional(),
+      ...trainerDetailFields,
       isActive: z.boolean().optional(),
     })
-    .refine(
-      (d) =>
-        d.name !== undefined ||
-        d.courses !== undefined ||
-        d.note !== undefined ||
-        d.isActive !== undefined,
-      { message: "At least one field is required" },
-    ),
+    // Keyed on the object rather than a hand-written list of fields, so adding
+    // another optional column cannot silently make this check wrong.
+    .refine((d) => Object.keys(d).length > 0, {
+      message: "At least one field is required",
+    }),
   params: z.object({ id: z.string().uuid() }),
   query: z.object({}).optional(),
 });
@@ -94,6 +113,13 @@ const trainerPayoutFilterSchema = z.object({
     paidFrom: z.string().optional(),
     paidTo: z.string().optional(),
     paymentSeq: z.enum(["BOTH", "FIRST", "SECOND"]).optional(),
+    // Only rows with an outstanding (or overpaid) balance — the Balance to Pay
+    // drill-down from the figures report. A string enum rather than a coerced
+    // boolean, since z.coerce.boolean("false") would be true.
+    hasBalance: z
+      .enum(["true", "false"])
+      .transform((v) => v === "true")
+      .optional(),
     search: z.string().optional(),
   }),
 });

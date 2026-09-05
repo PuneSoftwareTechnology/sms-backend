@@ -14,6 +14,14 @@ const TRAINER_COLUMNS = `
   name          AS "name",
   courses       AS "courses",
   note          AS "note",
+  pan_number            AS "panNumber",
+  bank_beneficiary_name AS "beneficiaryName",
+  bank_name             AS "bankName",
+  bank_ifsc             AS "ifscCode",
+  bank_account_number   AS "accountNumber",
+  -- float8 so the API hands the UI a number; NUMERIC comes back as a string.
+  fees::float8          AS "fees",
+  comment               AS "comment",
   is_active     AS "isActive",
   created_at    AS "createdAt"
 `;
@@ -22,14 +30,26 @@ const TRAINER_COLUMNS = `
 
 async function createTrainer(payload, client = pool) {
   const { rows } = await client.query(
-    `INSERT INTO trainers (name, courses, note, is_active)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO trainers (
+       name, courses, note, is_active,
+       pan_number, bank_beneficiary_name, bank_name, bank_ifsc,
+       bank_account_number, fees, comment
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
      RETURNING ${TRAINER_COLUMNS}`,
     [
       payload.name,
       payload.courses ?? [],
       payload.note || null,
       payload.isActive ?? true,
+      payload.panNumber ?? null,
+      payload.beneficiaryName ?? null,
+      payload.bankName ?? null,
+      payload.ifscCode ?? null,
+      payload.accountNumber ?? null,
+      // ?? not ||: a recorded fee of 0 is a real answer.
+      payload.fees ?? null,
+      payload.comment ?? null,
     ],
   );
   return rows[0];
@@ -90,6 +110,13 @@ async function listTrainersWithStats(filters = {}, client = pool) {
        t.name          AS "name",
        t.courses       AS "courses",
        t.note          AS "note",
+       t.pan_number            AS "panNumber",
+       t.bank_beneficiary_name AS "beneficiaryName",
+       t.bank_name             AS "bankName",
+       t.bank_ifsc             AS "ifscCode",
+       t.bank_account_number   AS "accountNumber",
+       t.fees::float8          AS "fees",
+       t.comment               AS "comment",
        t.is_active     AS "isActive",
        t.created_at    AS "createdAt",
        COUNT(e.id)::int AS "enrollmentCount",
@@ -134,6 +161,15 @@ async function updateTrainer(id, payload, client = pool) {
   if (payload.name !== undefined) push("name", payload.name);
   if (payload.courses !== undefined) push("courses", payload.courses);
   if (payload.note !== undefined) push("note", payload.note || null);
+  if (payload.panNumber !== undefined) push("pan_number", payload.panNumber);
+  if (payload.beneficiaryName !== undefined)
+    push("bank_beneficiary_name", payload.beneficiaryName);
+  if (payload.bankName !== undefined) push("bank_name", payload.bankName);
+  if (payload.ifscCode !== undefined) push("bank_ifsc", payload.ifscCode);
+  if (payload.accountNumber !== undefined)
+    push("bank_account_number", payload.accountNumber);
+  if (payload.fees !== undefined) push("fees", payload.fees);
+  if (payload.comment !== undefined) push("comment", payload.comment);
   if (payload.isActive !== undefined) push("is_active", payload.isActive);
 
   if (fields.length === 0) return findTrainerById(id, client);
@@ -185,6 +221,31 @@ async function mergeTrainers(survivorId, loserIds, client) {
           ) u
         )
       WHERE id = $1`,
+    [survivorId, loserIds],
+  );
+
+  // Same reasoning as the course union: if the survivor never had PAN or bank
+  // details recorded and an absorbed record did, take theirs rather than
+  // deleting the only copy. A value already on the survivor always wins.
+  await client.query(
+    `UPDATE trainers s
+        SET pan_number            = COALESCE(s.pan_number, l.pan_number),
+            bank_beneficiary_name = COALESCE(s.bank_beneficiary_name, l.bank_beneficiary_name),
+            bank_name             = COALESCE(s.bank_name, l.bank_name),
+            bank_ifsc             = COALESCE(s.bank_ifsc, l.bank_ifsc),
+            bank_account_number   = COALESCE(s.bank_account_number, l.bank_account_number),
+            fees                  = COALESCE(s.fees, l.fees)
+       FROM (
+         SELECT
+           (ARRAY_REMOVE(ARRAY_AGG(pan_number            ORDER BY created_at), NULL))[1] AS pan_number,
+           (ARRAY_REMOVE(ARRAY_AGG(bank_beneficiary_name ORDER BY created_at), NULL))[1] AS bank_beneficiary_name,
+           (ARRAY_REMOVE(ARRAY_AGG(bank_name             ORDER BY created_at), NULL))[1] AS bank_name,
+           (ARRAY_REMOVE(ARRAY_AGG(bank_ifsc             ORDER BY created_at), NULL))[1] AS bank_ifsc,
+           (ARRAY_REMOVE(ARRAY_AGG(bank_account_number   ORDER BY created_at), NULL))[1] AS bank_account_number,
+           (ARRAY_REMOVE(ARRAY_AGG(fees                  ORDER BY created_at), NULL))[1] AS fees
+         FROM trainers WHERE id = ANY($2::uuid[])
+       ) l
+      WHERE s.id = $1`,
     [survivorId, loserIds],
   );
 
