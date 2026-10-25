@@ -133,13 +133,18 @@ function buildBaseWhere(filters, values) {
   // drill-down from the Trainer Payment Figures report needs this one.
   // paymentMode narrows the same instalment, so a row only matches when one
   // instalment was both paid in the window and paid out of that account.
-  if (filters.paidFrom || filters.paidTo || filters.paymentMode) {
+  // hasTds narrows it again to instalments that had TDS deducted — the TDS
+  // report's drill-down, so the listed rows add up to the clicked figure.
+  if (filters.paidFrom || filters.paidTo || filters.paymentMode || filters.hasTds) {
     const seq = filters.paymentSeq;
     const parts = [];
     for (const n of [1, 2]) {
       if (seq === "FIRST" && n !== 1) continue;
       if (seq === "SECOND" && n !== 2) continue;
       const bounds = [`p.installment${n}_date IS NOT NULL`];
+      if (filters.hasTds) {
+        bounds.push(`COALESCE(p.installment${n}_tds, 0) > 0`);
+      }
       if (filters.paymentMode) {
         values.push(filters.paymentMode);
         bounds.push(`p.installment${n}_mode = $${values.length}`);
@@ -353,6 +358,8 @@ async function deletePayout(enrollmentId, client = pool) {
 /**
  * Trainer Payment Figures — amounts paid to each trainer, bucketed by the month
  * the payment was made, across one Indian financial year (Apr–Mar).
+ * `monthlyTds` buckets the TDS deducted on those same instalments the same way,
+ * which is all the TDS report needs — it is this query with different columns.
  *
  * Two things behave differently on purpose, matching the report spec:
  *  - `totalPaid` / `totalTds` are scoped to the selected year AND instalment.
@@ -437,7 +444,8 @@ async function trainerPaymentFigures(filters = {}, client = pool) {
         SELECT
           trainer_id,
           EXTRACT(MONTH FROM paid_date)::int AS month,
-          SUM(amount)::numeric               AS amount
+          SUM(amount)::numeric               AS amount,
+          SUM(tds)::numeric                  AS tds
         FROM paid
         GROUP BY trainer_id, 2
       ),
@@ -470,7 +478,14 @@ async function trainerPaymentFigures(filters = {}, client = pool) {
             FROM monthly m WHERE m.trainer_id = t.id
           ),
           '{}'::jsonb
-        )                               AS "monthly"
+        )                               AS "monthly",
+        COALESCE(
+          (
+            SELECT JSONB_OBJECT_AGG(m.month::text, m.tds)
+            FROM monthly m WHERE m.trainer_id = t.id AND m.tds <> 0
+          ),
+          '{}'::jsonb
+        )                               AS "monthlyTds"
       FROM roster r
       JOIN trainers t   ON t.id = r.trainer_id
       LEFT JOIN totals tot ON tot.trainer_id = t.id
@@ -492,6 +507,9 @@ async function trainerPaymentFigures(filters = {}, client = pool) {
     balanceToPay: Number(r.balanceToPay),
     monthly: Object.fromEntries(
       Object.entries(r.monthly ?? {}).map(([m, v]) => [Number(m), Number(v)]),
+    ),
+    monthlyTds: Object.fromEntries(
+      Object.entries(r.monthlyTds ?? {}).map(([m, v]) => [Number(m), Number(v)]),
     ),
   }));
 }

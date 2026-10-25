@@ -126,6 +126,11 @@ const trainerPayoutFilterSchema = z.object({
       .enum(["true", "false"])
       .transform((v) => v === "true")
       .optional(),
+    // Only instalments that had TDS deducted — the TDS report's drill-down.
+    hasTds: z
+      .enum(["true", "false"])
+      .transform((v) => v === "true")
+      .optional(),
     search: z.string().optional(),
   }),
 });

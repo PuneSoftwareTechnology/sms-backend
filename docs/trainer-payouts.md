@@ -117,7 +117,7 @@ Mirrors how master courses already work:
 | Create / edit / delete / merge | `/super-admin/trainers` | SUPER_ADMIN |
 | Payout tracker, edits, clear | `/admin/trainer-payouts` | SUPER_ADMIN |
 | Dashboard totals | inside `GET /admin/dashboard/stats` | SUPER_ADMIN |
-| Payment figures report | `GET /admin/reports/trainer-payment-figures` | SUPER_ADMIN |
+| Payment figures + TDS reports | `GET /admin/reports/trainer-payment-figures` | SUPER_ADMIN |
 
 Trainer payment figures are super-admin only. To open the tracker to admins,
 change the `authorizeRoles("SUPER_ADMIN")` calls on those three routes in
