@@ -19,8 +19,7 @@ const TRAINER_COLUMNS = `
   bank_name             AS "bankName",
   bank_ifsc             AS "ifscCode",
   bank_account_number   AS "accountNumber",
-  -- float8 so the API hands the UI a number; NUMERIC comes back as a string.
-  fees::float8          AS "fees",
+  fees                  AS "fees",
   comment               AS "comment",
   is_active     AS "isActive",
   created_at    AS "createdAt"
@@ -47,7 +46,6 @@ async function createTrainer(payload, client = pool) {
       payload.bankName ?? null,
       payload.ifscCode ?? null,
       payload.accountNumber ?? null,
-      // ?? not ||: a recorded fee of 0 is a real answer.
       payload.fees ?? null,
       payload.comment ?? null,
     ],
@@ -115,7 +113,7 @@ async function listTrainersWithStats(filters = {}, client = pool) {
        t.bank_name             AS "bankName",
        t.bank_ifsc             AS "ifscCode",
        t.bank_account_number   AS "accountNumber",
-       t.fees::float8          AS "fees",
+       t.fees                  AS "fees",
        t.comment               AS "comment",
        t.is_active     AS "isActive",
        t.created_at    AS "createdAt",

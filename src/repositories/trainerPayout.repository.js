@@ -131,13 +131,19 @@ function buildBaseWhere(filters, values) {
   // paidFrom/paidTo filter on when the TRAINER was paid, which is a different
   // date from fromDate/toDate above (the student's enrollment start). The month
   // drill-down from the Trainer Payment Figures report needs this one.
-  if (filters.paidFrom || filters.paidTo) {
+  // paymentMode narrows the same instalment, so a row only matches when one
+  // instalment was both paid in the window and paid out of that account.
+  if (filters.paidFrom || filters.paidTo || filters.paymentMode) {
     const seq = filters.paymentSeq;
     const parts = [];
     for (const n of [1, 2]) {
       if (seq === "FIRST" && n !== 1) continue;
       if (seq === "SECOND" && n !== 2) continue;
       const bounds = [`p.installment${n}_date IS NOT NULL`];
+      if (filters.paymentMode) {
+        values.push(filters.paymentMode);
+        bounds.push(`p.installment${n}_mode = $${values.length}`);
+      }
       if (filters.paidFrom) {
         values.push(filters.paidFrom);
         bounds.push(`p.installment${n}_date >= $${values.length}`);
@@ -355,7 +361,9 @@ async function deletePayout(enrollmentId, client = pool) {
  *
  * Rows are the trainers who have at least one enrollment matching the batch /
  * course / completion filters, so a trainer with no payments yet still shows as
- * a zero row rather than vanishing.
+ * a zero row rather than vanishing. The exception is a payment mode: picking one
+ * asks "who did we pay out of this account", so trainers with no matching
+ * payment in the year are dropped instead of listed as zeros.
  */
 async function trainerPaymentFigures(filters = {}, client = pool) {
   const values = [];
@@ -388,6 +396,14 @@ async function trainerPaymentFigures(filters = {}, client = pool) {
   const seq = filters.paymentSeq;
   const seqNumbers = seq === "FIRST" ? [1] : seq === "SECOND" ? [2] : [1, 2];
 
+  // Mode is per instalment, so it narrows the paid rows only — like the year
+  // and sequence, it leaves the roster and the all-time balance alone.
+  let modeParam = null;
+  if (filters.paymentMode) {
+    values.push(filters.paymentMode);
+    modeParam = `$${values.length}`;
+  }
+
   // One row per dated instalment, so months can be bucketed by payment date.
   const instalmentUnion = seqNumbers
     .map(
@@ -402,7 +418,9 @@ async function trainerPaymentFigures(filters = {}, client = pool) {
         WHERE ${where}
           AND p.installment${n}_date IS NOT NULL
           AND p.installment${n}_date >= ${fromParam}::date
-          AND p.installment${n}_date <= ${toParam}::date`,
+          AND p.installment${n}_date <= ${toParam}::date${
+            modeParam ? `\n          AND p.installment${n}_mode = ${modeParam}` : ""
+          }`,
     )
     .join("\n        UNION ALL");
 
@@ -457,6 +475,7 @@ async function trainerPaymentFigures(filters = {}, client = pool) {
       JOIN trainers t   ON t.id = r.trainer_id
       LEFT JOIN totals tot ON tot.trainer_id = t.id
       LEFT JOIN balance bal ON bal.trainer_id = t.id
+      ${modeParam ? "WHERE tot.trainer_id IS NOT NULL" : ""}
       ORDER BY COALESCE(tot.paid, 0) DESC, t.name ASC
     `,
     values,

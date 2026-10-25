@@ -57,8 +57,9 @@ export or report.
   `trainer_payouts.training_fee`, edited per row on Trainer Payments. Defaulting
   one from the other would rewrite payment history the next time somebody edited
   the trainer's rate.
-- `fees` is nullable on purpose: `NULL` is "not recorded", `0` would read as
-  "works for free".
+- `fees` is free `TEXT`, not a number (migration `make-trainer-fees-text.mjs`):
+  rates are agreed as "40% of course fees" or "15k for Agentic AI, 12k for
+  Python full stack" as often as a flat amount. Blank is stored as `NULL`.
 - Account numbers are `TEXT`, never numeric — they carry leading zeros and are
   identifiers, not quantities.
 - PAN and IFSC are stored upper-cased but **not** format-enforced: an admin
@@ -162,20 +163,25 @@ January to March fall in the *following* calendar year. `financialYearRange()` o
 the frontend owns that off-by-one and is unit-tested, leap-year February
 included.
 
-Filters: payment year, batch, course, course completion status, and payment
-sequence (both instalments by default, or just the 1st / 2nd).
+Filters: payment year, batch, course, course completion status, payment
+sequence (both instalments by default, or just the 1st / 2nd), and payment mode
+(all by default, or one of HDFC / ICICI / IndusInd / Cash). Mode is recorded per
+instalment, so it is matched against the same instalment being counted.
 
 Two deliberate asymmetries, both flagged in the UI:
 
-- **Month columns, Total Paid and Total TDS** are scoped to the selected year
-  *and* payment sequence. Buckets come from the instalment's payment date.
+- **Month columns, Total Paid and Total TDS** are scoped to the selected year,
+  payment sequence *and* payment mode. Buckets come from the instalment's
+  payment date.
 - **Balance to Pay** is not. It is the outstanding amount across all time,
   because what we still owe is not a property of a financial year. The column is
   marked with an asterisk and the footnote says so.
 
 Rows are the trainers with at least one enrollment matching the batch / course /
 completion filters, so a trainer who has been paid nothing still appears as a
-zero row instead of vanishing from the roster.
+zero row instead of vanishing from the roster. Selecting a payment mode is the
+exception: only trainers with at least one payment through that mode in the
+selected year (and sequence) are listed.
 
 ### Drill-down
 

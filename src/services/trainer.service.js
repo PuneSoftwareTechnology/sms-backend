@@ -21,6 +21,7 @@ const DETAIL_FIELDS = [
   "bankName",
   "ifscCode",
   "accountNumber",
+  "fees",
   "comment",
 ];
 
@@ -34,9 +35,6 @@ function detailUpdates(payload, { includeUnset = false } = {}) {
         ? trimmed.toUpperCase()
         : trimmed
       : null;
-  }
-  if (payload.fees !== undefined || includeUnset) {
-    out.fees = payload.fees ?? null;
   }
   return out;
 }

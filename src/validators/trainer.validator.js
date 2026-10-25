@@ -9,14 +9,18 @@ import { z } from "zod";
  */
 const optionalText = (max) => z.string().trim().max(max).nullable().optional();
 
+/** Accounts a payout instalment can go out of, as stored in installmentN_mode. */
+const PAYOUT_MODES = ["HDFC", "ICICI", "INDUSIND", "CASH"];
+
 const trainerDetailFields = {
   panNumber: optionalText(20),
   beneficiaryName: optionalText(150),
   bankName: optionalText(150),
   ifscCode: optionalText(20),
   accountNumber: optionalText(40),
-  // Nullable, not defaulted to 0: "not recorded" and "works for free" differ.
-  fees: z.number().min(0).nullable().optional(),
+  // Free text, not a number: rates are agreed as "40% of course fees" or
+  // "15k for Agentic AI, 12k for Python full stack" as often as a flat amount.
+  fees: optionalText(500),
   comment: optionalText(1000),
 };
 
@@ -113,6 +117,8 @@ const trainerPayoutFilterSchema = z.object({
     paidFrom: z.string().optional(),
     paidTo: z.string().optional(),
     paymentSeq: z.enum(["BOTH", "FIRST", "SECOND"]).optional(),
+    // Account the instalment went out of — narrows the paid-date filter above.
+    paymentMode: z.enum(PAYOUT_MODES).optional(),
     // Only rows with an outstanding (or overpaid) balance — the Balance to Pay
     // drill-down from the figures report. A string enum rather than a coerced
     // boolean, since z.coerce.boolean("false") would be true.
@@ -135,6 +141,8 @@ const trainerPaymentFiguresSchema = z.object({
     completionStatus: z.string().optional(),
     // BOTH is the default; FIRST / SECOND narrow to one instalment.
     paymentSeq: z.enum(["BOTH", "FIRST", "SECOND"]).optional(),
+    // Only instalments paid out of this account; all modes when omitted.
+    paymentMode: z.enum(PAYOUT_MODES).optional(),
   }),
 });
 
